@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoReview — Protótipo</title>
+<style>
+:root{
+  --bg:#f5f5f3;
+  --panel:#ffffff;
+  --panel2:#fafafa;
+  --border:#e4e4e1;
+  --text:#171717;
+  --muted:#747474;
+  --purple:#68646d;
+  --purple2:#8a878e;
+  --green:#587060;
+  --yellow:#766a4f;
+  --red:#7a5a5a;
+  --blue:#5f6b78;
+  --shadow:0 5px 20px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.app{min-height:100vh;display:flex}
+.sidebar{
+  width:250px;position:fixed;inset:0 auto 0 0;
+  background:#fafafa;border-right:1px solid var(--border);
+  padding:24px 16px;z-index:10
+}
+.logo{display:flex;align-items:center;gap:10px;padding:0 10px 28px}
+.logo-mark{
+  width:36px;height:36px;border-radius:11px;background:#2b2b2b;
+  display:grid;place-items:center;font-weight:900
+}
+.logo strong{font-size:17px;letter-spacing:-.3px}
+.logo span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.nav-title{font-size:11px;color:#666675;text-transform:uppercase;letter-spacing:1.2px;padding:10px}
+.nav{display:grid;gap:6px}
+.nav button{
+  border:0;background:transparent;color:#b4b4c0;text-align:left;padding:12px 12px;border-radius:10px;
+  display:flex;gap:11px;align-items:center
+}
+.nav button:hover,.nav button.active{background:#1b1824;color:#fff}
+.nav button.active{box-shadow:inset 3px 0 0 var(--purple)}
+.user-card{
+  position:absolute;left:16px;right:16px;bottom:18px;border:1px solid var(--border);
+  background:#ffffff;border-radius:14px;padding:12px
+}
+.user-card small{color:var(--muted)}
+.main{margin-left:250px;min-height:100vh;width:calc(100% - 250px)}
+.topbar{
+  height:72px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;
+  padding:0 30px;background:rgba(11,11,15,.88);backdrop-filter:blur(12px);position:sticky;top:0;z-index:8
+}
+.topbar h1{font-size:20px;margin:0}
+.topbar p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.top-actions{display:flex;gap:10px;align-items:center}
+.avatar{width:36px;height:36px;border-radius:50%;background:#292936;display:grid;place-items:center;font-weight:700}
+.content{padding:30px;max-width:1500px;margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+.grid{display:grid;gap:18px}
+.grid.stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid.projects{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow)
+}
+.card h3{margin:0 0 7px;font-size:16px}
+.card p{color:var(--muted);margin:0;font-size:13px;line-height:1.55}
+.metric{font-size:30px;font-weight:800;margin:12px 0 4px}
+.mini{font-size:12px;color:var(--muted)}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;
+  font-size:11px;font-weight:700
+}
+.badge.green{background:#eef2ee;color:#587060}
+.badge.yellow{background:#f3f1eb;color:#766a4f}
+.badge.red{background:#f3eeee;color:#7a5a5a}
+.badge.blue{background:#eef0f2;color:#5f6b78}
+.badge.purple{background:#efefed;color:#68646d}
+.section-head{display:flex;align-items:end;justify-content:space-between;margin:28px 0 14px}
+.section-head h2{margin:0;font-size:18px}
+.section-head p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.btn{
+  border:1px solid var(--border);background:#ffffff;color:#eee;padding:10px 14px;border-radius:10px
+}
+.btn:hover{background:#f0f0ee}
+.btn.primary{background:var(--purple);border-color:var(--purple);color:white}
+.btn.primary:hover{background:#7c4de5}
+.btn.danger{background:rgba(255,92,108,.1);color:#ff8090;border-color:rgba(255,92,108,.2)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.project-card{padding:0;overflow:hidden}
+.project-thumb{
+  height:150px;background:linear-gradient(135deg,#dededb,#c5c5c1);position:relative;display:flex;align-items:end;padding:14px
+}
+.project-thumb .play{
+  width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);
+  display:grid;place-items:center;margin:auto;font-size:18px
+}
+.project-body{padding:16px}
+.project-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.project-body h3{font-size:16px}
+.project-body .client{font-size:12px;color:var(--muted);margin-bottom:14px}
+.progress{height:6px;background:#e6e6e3;border-radius:999px;overflow:hidden;margin:8px 0 14px}
+.progress > div{height:100%;background:#77737a;border-radius:999px}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--border);font-size:13px}
+.table th{color:#858592;font-size:11px;text-transform:uppercase;letter-spacing:.7px}
+.table td{color:#ddd}
+.search{
+  width:280px;background:#13131a;border:1px solid var(--border);padding:10px 12px;border-radius:10px;color:#fff;outline:0
+}
+.search:focus{border-color:#5b3a9a}
+.empty{padding:48px;text-align:center;color:var(--muted)}
+.detail-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.detail-title h2{margin:0;font-size:27px}
+.detail-title p{margin:7px 0 0;color:var(--muted)}
+.detail-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-top:20px}
+.video{
+  background:#181818;border:1px solid var(--border);border-radius:16px;overflow:hidden
+}
+.video-screen{
+  aspect-ratio:16/9;display:grid;place-items:center;position:relative;
+  background:
+   radial-gradient(circle at 30% 25%, rgba(139,92,246,.35), transparent 32%),
+   linear-gradient(135deg,#202034,#09090c 65%);
+}
+.video-screen:before{content:"PREVIEW";font-size:48px;font-weight:900;letter-spacing:8px;color:rgba(255,255,255,.06)}
+.play-big{position:absolute;width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);display:grid;place-items:center;font-size:25px}
+.controls{padding:14px;border-top:1px solid var(--border)}
+.timeline{height:8px;background:#dfdfdc;border-radius:8px;position:relative;cursor:pointer}
+.timeline .fill{height:100%;width:38%;background:var(--purple);border-radius:8px}
+.marker{position:absolute;top:-4px;width:4px;height:16px;background:#ffcc66;border-radius:2px}
+.marker.m1{left:42%}.marker.m2{left:69%}.marker.m3{left:83%}
+.time-row{display:flex;justify-content:space-between;color:#9c9ca9;font-size:11px;margin-top:8px}
+.comment-form textarea{
+  width:100%;min-height:95px;background:#f8f8f6;border:1px solid var(--border);color:#fff;border-radius:10px;padding:12px;resize:vertical;outline:0
+}
+.comment-form textarea:focus{border-color:#5b3a9a}
+.comment-form .minute{
+  display:flex;gap:8px;margin:10px 0
+}
+.comment-form input{
+  flex:1;background:#f8f8f6;border:1px solid var(--border);color:#fff;border-radius:10px;padding:10px;outline:0
+}
+.comment{padding:15px 0;border-bottom:1px solid var(--border)}
+.comment:last-child{border-bottom:0}
+.comment-top{display:flex;justify-content:space-between;gap:10px}
+.comment .author{font-weight:700;font-size:13px}
+.comment .minute-tag{color:var(--purple2);font-size:11px;font-weight:700}
+.comment p{font-size:13px;color:#c8c8d0;line-height:1.5;margin:7px 0}
+.comment-actions{display:flex;gap:8px;align-items:center}
+.linkbox{display:flex;gap:8px}
+.linkbox input{flex:1;background:#f8f8f6;border:1px solid var(--border);padding:10px;border-radius:10px;color:#aaa}
+.side-stack{display:grid;gap:18px}
+.version{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)}
+.version:last-child{border-bottom:0}
+.version strong{font-size:13px}.version small{display:block;color:var(--muted);margin-top:4px}
+.login-screen{
+  min-height:100vh;display:grid;place-items:center;background:
+  radial-gradient(circle at 30% 20%,rgba(139,92,246,.18),transparent 30%),
+  radial-gradient(circle at 75% 80%,rgba(77,102,255,.12),transparent 25%),#f5f5f3
+}
+.login-box{width:min(440px,calc(100% - 32px));background:#ffffff;border:1px solid var(--border);border-radius:20px;padding:34px;box-shadow:var(--shadow)}
+.login-box h1{margin:16px 0 8px;font-size:29px}
+.login-box p{margin:0 0 24px;color:var(--muted);line-height:1.5;font-size:13px}
+.form-group{display:grid;gap:7px;margin-bottom:14px}.form-group label{font-size:12px;color:#bbb}
+.form-group input{background:#0f0f15;border:1px solid var(--border);padding:12px;border-radius:10px;color:#fff;outline:0}
+.form-group input:focus{border-color:#6641a8}
+.full{width:100%}
+.demo-tip{margin-top:12px;font-size:11px;color:#737381;text-align:center}
+.client-mode{display:none;min-height:100vh;background:#f5f5f3}
+.client-top{height:68px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+.client-main{max-width:1220px;margin:0 auto;padding:28px}
+.client-brand{font-weight:800}.client-brand span{color:var(--purple2)}
+.client-grid{display:grid;grid-template-columns:1.45fr .55fr;gap:18px;margin-top:18px}
+.client-info{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.client-info h1{margin:0;font-size:26px}.client-info p{color:var(--muted);margin:6px 0 0;font-size:13px}
+.notice{border:1px solid rgba(139,92,246,.23);background:rgba(139,92,246,.08);padding:12px 14px;border-radius:12px;color:#d7cbff;font-size:12px;margin:18px 0}
+.modal{
+ position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(7px);display:none;place-items:center;z-index:30
+}
+.modal.open{display:grid}
+.modal-box{width:min(560px,calc(100% - 30px));background:#14141b;border:1px solid var(--border);border-radius:18px;padding:22px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-head h3{margin:0}
+.close{border:0;background:none;color:#aaa;font-size:20px}
+select{background:#f8f8f6;color:#fff;border:1px solid var(--border);padding:10px;border-radius:10px}
+@media(max-width:1100px){
+ .grid.projects{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .grid.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .detail-grid,.client-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+ .sidebar{width:70px;padding:18px 10px}.logo{padding:0 0 20px;justify-content:center}.logo > div:last-child,.nav-title,.nav button span,.user-card{display:none}
+ .nav button{justify-content:center}.main{margin-left:70px;width:calc(100% - 70px)}
+ .content{padding:18px}.topbar{padding:0 18px}
+ .topbar p{display:none}.grid.projects,.grid.stats{grid-template-columns:1fr}
+ .search{width:180px}
+}
+
+/* clean neutral theme */
+body{letter-spacing:-.01em}
+.card{box-shadow:0 4px 18px rgba(0,0,0,.035)}
+.sidebar{box-shadow:1px 0 0 rgba(0,0,0,.02)}
+.btn.primary{background:#303030;border-color:#303030;color:#fff}
+.btn.primary:hover{background:#202020}
+.nav button:hover,.nav button.active{background:#eeeeec;color:#ededed}
+.nav button.active{box-shadow:inset 2px 0 0 #68646d}
+.badge{font-weight:650}
+.project-thumb{filter:saturate(.08)}
+.project-thumb .play{background:rgba(255,255,255,.75);color:#ededed}
+.notice{border-color:#deddd8;background:#f3f3f0;color:#555}
+.timeline .fill{background:#747078}
+
+
+/* DARK NEUTRAL THEME */
+:root{
+  --bg:#0d0d0f;
+  --panel:#151517;
+  --panel2:#1a1a1d;
+  --border:#29292d;
+  --text:#f2f2f2;
+  --muted:#96969f;
+  --purple:#77717f;
+  --purple2:#a09aa6;
+  --green:#7d9b88;
+  --yellow:#b09c72;
+  --red:#a97878;
+  --blue:#84909e;
+  --shadow:0 8px 28px rgba(0,0,0,.22);
+}
+
+body{background:var(--bg);color:var(--text)}
+.sidebar{background:#111113;border-right-color:#29292d}
+.main{background:var(--bg)}
+.topbar{background:rgba(13,13,15,.92);border-bottom-color:#29292d}
+.card{background:var(--panel);border-color:var(--border);box-shadow:var(--shadow)}
+.user-card{background:#171719;border-color:var(--border)}
+.nav button{color:#a9a9b1}
+.nav button:hover,.nav button.active{background:#1d1d21;color:#f4f4f4}
+.nav button.active{box-shadow:inset 2px 0 0 #77717f}
+.btn{background:#1b1b1e;border-color:#303035;color:#ededed}
+.btn:hover{background:#232328}
+.btn.primary{background:#ededed;border-color:#ededed;color:#151515}
+.btn.primary:hover{background:#d8d8d8}
+.btn.danger{background:rgba(169,120,120,.12);color:#c49696;border-color:rgba(169,120,120,.2)}
+
+.search,.form-group input,.form-group textarea,.comment-form input,.comment-form textarea,.linkbox input{
+  background:#101012;
+  border-color:#2c2c30;
+  color:#f2f2f2;
+}
+.search::placeholder,.form-group input::placeholder,.form-group textarea::placeholder,
+.comment-form input::placeholder,.comment-form textarea::placeholder{color:#66666e}
+
+.table th{color:#808087}
+.table td{color:#dedee2}
+.project-thumb{background:linear-gradient(135deg,#29292d,#171719);filter:none}
+.project-thumb .play{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.12)}
+.progress{background:#2a2a2e}
+.progress > div{background:#77717f}
+.badge.green{background:rgba(125,155,136,.12);color:#8faa99}
+.badge.yellow{background:rgba(176,156,114,.12);color:#b7a575}
+.badge.red{background:rgba(169,120,120,.12);color:#c09292}
+.badge.blue{background:rgba(132,144,158,.12);color:#97a1af}
+.badge.purple{background:rgba(119,113,127,.14);color:#aaa4b0}
+
+.video{background:#080809;border-color:#2a2a2d}
+.video-screen{background:linear-gradient(135deg,#303033,#111113 65%)}
+.controls{border-top-color:#29292d}
+.timeline{background:#303034}
+.timeline .fill{background:#807987}
+.marker{background:#aaa18d}
+
+.notice{border-color:#323236;background:#1a1a1d;color:#bcbcc2}
+.comment{border-bottom-color:#29292d}
+.comment .author{color:#efeff1}
+.comment p{color:#b8b8bf}
+.version{border-bottom-color:#29292d}
+.mini{color:#85858e}
+.side-stack .card p,.detail-title p,.topbar p,.section-head p,.project-body .client,
+.client-info p{color:#8f8f98}
+
+.login-screen{
+  background:
+    radial-gradient(circle at 30% 20%,rgba(255,255,255,.035),transparent 30%),
+    radial-gradient(circle at 75% 80%,rgba(255,255,255,.02),transparent 25%),
+    #0d0d0f;
+}
+.login-box{background:#151517;border-color:#29292d;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.login-box p{color:#93939b}
+.demo-tip{color:#6f6f77}
+
+.client-mode{background:#0d0d0f}
+.client-top{background:#111113;border-bottom-color:#29292d}
+.client-brand{color:#eee}
+.client-brand span{color:#a09aa6}
+
+.close{color:#96969f}
+select{background:#101012;color:#eee;border-color:#2c2c30}
+
+.clean-neutral-fix{color:#fff}
+
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login-screen">
+  <div class="login-box">
+    <div class="logo">
+      <div class="logo-mark">R</div>
+      <div><strong>VideoReview</strong><span>Gestão de revisão de vídeos</span></div>
+    </div>
+    <h1>Entrar no painel</h1>
+    <p>Protótipo do sistema de gerenciamento de revisão entre editor e cliente.</p>
+    <div class="form-group"><label>E-mail</label><input id="email" value="editor@demo.com"></div>
+    <div class="form-group"><label>Senha</label><input id="password" type="password" value="123456"></div>
+    <button class="btn primary full" onclick="login()">Entrar como Editor</button>
+    <div class="demo-tip">Demonstração local — qualquer credencial preenchida funciona.</div>
+  </div>
+</div>
+
+<div id="editorApp" class="app" style="display:none">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">R</div>
+      <div><strong>VideoReview</strong><span>Video Review</span></div>
+    </div>
+    <div class="nav-title">Workspace</div>
+    <div class="nav">
+      <button class="active" data-view="dashboard" onclick="showView('dashboard',this)">◈ <span>Dashboard</span></button>
+      <button data-view="projects" onclick="showView('projects',this)">▣ <span>Projetos</span></button>
+      <button data-view="clients" onclick="showView('clients',this)">♙ <span>Clientes</span></button>
+    </div>
+    <div class="nav-title" style="margin-top:18px">Demonstração</div>
+    <div class="nav">
+      <button onclick="openClientView()">↗ <span>Ver como cliente</span></button>
+      <button onclick="logout()">⇥ <span>Sair</span></button>
+    </div>
+    <div class="user-card"><strong>Adryerick</strong><br><small>Editor de Vídeo</small></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div><h1 id="pageTitle">Dashboard</h1><p id="pageSubtitle">Visão geral do seu fluxo de revisão.</p></div>
+      <div class="top-actions">
+        <button class="btn" onclick="openModal('projectModal')">+ Novo projeto</button>
+        <div class="avatar">AD</div>
+      </div>
+    </div>
+
+    <section class="content">
+      <div id="dashboard" class="view active">
+        <div class="grid stats">
+          <div class="card"><span class="mini">Projetos ativos</span><div class="metric" id="metricProjects">4</div><span class="mini">em revisão</span></div>
+          <div class="card"><span class="mini">Solicitações pendentes</span><div class="metric">7</div><span class="mini">precisam de atenção</span></div>
+          <div class="card"><span class="mini">Versões enviadas</span><div class="metric">16</div><span class="mini">nos últimos projetos</span></div>
+          <div class="card"><span class="mini">Clientes</span><div class="metric">12</div><span class="mini">cadastrados</span></div>
+        </div>
+
+        <div class="section-head">
+          <div><h2>Projetos recentes</h2><p>Acompanhe o andamento das revisões.</p></div>
+          <button class="btn" onclick="showView('projects',document.querySelector('[data-view=projects]'))">Ver todos</button>
+        </div>
+
+        <div class="grid projects" id="dashboardProjects"></div>
+
+        <div class="section-head">
+          <div><h2>Últimas solicitações</h2><p>Feedback recebido dos clientes.</p></div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead><tr><th>Projeto</th><th>Cliente</th><th>Minutagem</th><th>Solicitação</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>VSL — Curso Motion</td><td>Cliente Demo</td><td>00:23</td><td>Trocar texto da oferta.</td><td><span class="badge yellow">Em andamento</span></td></tr>
+              <tr><td>Reel — Lançamento</td><td>Studio X</td><td>00:41</td><td>Aumentar o volume do SFX.</td><td><span class="badge red">Pendente</span></td></tr>
+              <tr><td>Ad — Produto</td><td>Marca Alpha</td><td>01:12</td><td>Adicionar logo no final.</td><td><span class="badge green">Resolvida</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="projects" class="view">
+        <div class="row" style="justify-content:space-between;margin-bottom:18px">
+          <div>
+            <h2 style="margin:0">Projetos</h2>
+            <p style="color:var(--muted);margin:6px 0 0">Organize projetos, versões e revisões.</p>
+          </div>
+          <div class="row"><input class="search" placeholder="Buscar projeto..." oninput="filterProjects(this.value)"><button class="btn primary" onclick="openModal('projectModal')">+ Criar projeto</button></div>
+        </div>
+        <div class="grid projects" id="projectGrid"></div>
+      </div>
+
+      <div id="clients" class="view">
+        <div class="row" style="justify-content:space-between;margin-bottom:18px">
+          <div><h2 style="margin:0">Clientes</h2><p style="color:var(--muted);margin:6px 0 0">Cadastre e consulte seus clientes.</p></div>
+          <button class="btn primary" onclick="openModal('clientModal')">+ Novo cliente</button>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead><tr><th>Cliente</th><th>E-mail</th><th>Projetos</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody id="clientTable">
+              <tr><td><strong>Cliente Demo</strong></td><td>cliente@demo.com</td><td>3</td><td><span class="badge green">Ativo</span></td><td><button class="btn" onclick="openClientView()">Abrir revisão</button></td></tr>
+              <tr><td><strong>Studio X</strong></td><td>contato@studiox.com</td><td>2</td><td><span class="badge green">Ativo</span></td><td><button class="btn">Ver projetos</button></td></tr>
+              <tr><td><strong>Marca Alpha</strong></td><td>marketing@alpha.com</td><td>4</td><td><span class="badge purple">Concluído</span></td><td><button class="btn">Ver projetos</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="projectDetail" class="view"></div>
+    </section>
+  </main>
+</div>
+
+<div id="clientApp" class="client-mode">
+  <header class="client-top">
+    <div class="client-brand">Review<span>Cut</span></div>
+    <div class="row"><span class="mini">Projeto compartilhado</span><button class="btn" onclick="backToEditor()">Voltar ao editor</button></div>
+  </header>
+  <main class="client-main">
+    <div class="client-info">
+      <div><h1>VSL — Curso Motion</h1><p>Cliente Demo · Versão 03 · Enviada hoje</p></div>
+      <span class="badge yellow">Em revisão</span>
+    </div>
+    <div class="notice">Você está revisando a <strong>Versão 03</strong>. Seus comentários ficarão vinculados a esta versão do vídeo.</div>
+
+    <div class="client-grid">
+      <div>
+        <div class="card video">
+          <div class="video-screen"><button class="play-big" onclick="togglePlay(this)">▶</button></div>
+          <div class="controls">
+            <div class="timeline" onclick="setProgress(event,this)">
+              <div class="fill"></div><div class="marker m1"></div><div class="marker m2"></div><div class="marker m3"></div>
+            </div>
+            <div class="time-row"><span id="currentTime">00:23</span><span>02:48</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h3>Registrar solicitação de alteração</h3>
+          <p>Selecione um ponto da timeline e descreva o que precisa ser alterado.</p>
+          <div class="comment-form" style="margin-top:14px">
+            <div class="minute"><input id="minuteInput" value="00:23"><button class="btn" onclick="setMarkerFromInput()">Marcar ponto</button></div>
+            <textarea id="commentInput" placeholder="Ex.: Trocar o texto atual por “Domine Motion Design em 30 dias”."></textarea>
+            <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary" onclick="addComment()">Enviar solicitação</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="side-stack">
+        <div class="card">
+          <h3>Solicitações</h3>
+          <p>Acompanhe o andamento dos seus pedidos.</p>
+          <div id="clientComments" style="margin-top:8px">
+            <div class="comment">
+              <div class="comment-top"><span class="author">Você</span><span class="minute-tag">00:23</span></div>
+              <p>Trocar o texto da oferta para destacar o desconto.</p>
+              <div class="comment-actions"><span class="badge yellow">Em andamento</span></div>
+            </div>
+            <div class="comment">
+              <div class="comment-top"><span class="author">Você</span><span class="minute-tag">01:12</span></div>
+              <p>Adicionar logo da marca no encerramento.</p>
+              <div class="comment-actions"><span class="badge green">Resolvida</span></div>
+            </div>
+            <div class="comment">
+              <div class="comment-top"><span class="author">Você</span><span class="minute-tag">01:44</span></div>
+              <p>Diminuir a duração do glitch nesta transição.</p>
+              <div class="comment-actions"><span class="badge red">Pendente</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Versões</h3>
+          <p>Histórico do projeto.</p>
+          <div class="version"><div><strong>Versão 03</strong><small>10/09/2026 · atual</small></div><span class="badge purple">Revisão</span></div>
+          <div class="version"><div><strong>Versão 02</strong><small>08/09/2026</small></div><span class="badge green">Anterior</span></div>
+          <div class="version"><div><strong>Versão 01</strong><small>05/09/2026</small></div><span class="badge green">Anterior</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="projectModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Novo projeto</h3><button class="close" onclick="closeModal('projectModal')">×</button></div>
+    <div class="form-group"><label>Nome do projeto</label><input id="newProjectName" placeholder="Ex.: VSL — Produto X"></div>
+    <div class="form-group"><label>Cliente</label><select id="newProjectClient"><option>Cliente Demo</option><option>Studio X</option><option>Marca Alpha</option></select></div>
+    <div class="form-group"><label>Descrição</label><textarea id="newProjectDesc" style="min-height:90px;background:#f8f8f6;border:1px solid var(--border);color:#fff;border-radius:10px;padding:12px" placeholder="Descrição do projeto"></textarea></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal('projectModal')">Cancelar</button><button class="btn primary" onclick="createProject()">Criar projeto</button></div>
+  </div>
+</div>
+
+<div id="clientModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Cadastrar cliente</h3><button class="close" onclick="closeModal('clientModal')">×</button></div>
+    <div class="form-group"><label>Nome</label><input id="newClientName" placeholder="Nome do cliente"></div>
+    <div class="form-group"><label>E-mail</label><input id="newClientEmail" placeholder="cliente@email.com"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal('clientModal')">Cancelar</button><button class="btn primary" onclick="createClient()">Salvar cliente</button></div>
+  </div>
+</div>
+
+<script>
+const projects = [
+ {id:1,name:'VSL — Curso Motion',client:'Cliente Demo',version:3,status:'Em revisão',progress:72,requests:3},
+ {id:2,name:'Reel — Lançamento',client:'Studio X',version:2,status:'Pendente',progress:44,requests:2},
+ {id:3,name:'Ad — Produto',client:'Marca Alpha',version:5,status:'Resolvido',progress:100,requests:0},
+ {id:4,name:'Institucional 2026',client:'Cliente Demo',version:1,status:'Aguardando cliente',progress:88,requests:1},
+ {id:5,name:'VSL — Black Friday',client:'Studio X',version:4,status:'Em revisão',progress:61,requests:4},
+ {id:6,name:'Social Ads — Q4',client:'Marca Alpha',version:2,status:'Pendente',progress:33,requests:5}
+];
+
+function login(){
+ document.getElementById('loginView').style.display='none';
+ document.getElementById('editorApp').style.display='flex';
+ renderProjects();
+ renderDashboard();
+}
+function logout(){
+ document.getElementById('editorApp').style.display='none';
+ document.getElementById('clientApp').style.display='none';
+ document.getElementById('loginView').style.display='grid';
+}
+function showView(id,btn){
+ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+ if(btn) btn.classList.add('active');
+ const titles={
+  dashboard:['Dashboard','Visão geral do seu fluxo de revisão.'],
+  projects:['Projetos','Gerencie trabalhos, versões e solicitações.'],
+  clients:['Clientes','Cadastre e consulte seus clientes.']
+ };
+ if(titles[id]){
+  document.getElementById('pageTitle').textContent=titles[id][0];
+  document.getElementById('pageSubtitle').textContent=titles[id][1];
+ }
+}
+function statusBadge(status){
+ const cls=status==='Resolvido'||status==='Resolvida'?'green':status==='Pendente'?'red':status==='Aguardando cliente'?'blue':'yellow';
+ return '<span class="badge '+cls+'">'+status+'</span>';
+}
+function cardHTML(p){
+ return `<div class="card project-card" data-project-name="${p.name.toLowerCase()}">
+   <div class="project-thumb"><button class="play" onclick="openProject(${p.id})">▶</button></div>
+   <div class="project-body">
+    <div class="project-meta"><span class="badge purple">V${String(p.version).padStart(2,'0')}</span>${statusBadge(p.status)}</div>
+    <h3>${p.name}</h3>
+    <div class="client">${p.client}</div>
+    <div class="mini">Progresso da revisão</div>
+    <div class="progress"><div style="width:${p.progress}%"></div></div>
+    <div class="row" style="justify-content:space-between"><span class="mini">${p.requests} solicitações</span><button class="btn" onclick="openProject(${p.id})">Gerenciar</button></div>
+   </div>
+ </div>`;
+}
+function renderProjects(filter=''){
+ const grid=document.getElementById('projectGrid');
+ const filtered=projects.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
+ grid.innerHTML=filtered.map(cardHTML).join('') || '<div class="empty">Nenhum projeto encontrado.</div>';
+}
+function renderDashboard(){
+ document.getElementById('dashboardProjects').innerHTML=projects.slice(0,3).map(cardHTML).join('');
+ document.getElementById('metricProjects').textContent=projects.filter(p=>p.status!=='Resolvido').length;
+}
+function filterProjects(v){renderProjects(v)}
+function openProject(id){
+ const p=projects.find(x=>x.id===id);
+ const view=document.getElementById('projectDetail');
+ view.innerHTML=`
+  <div class="detail-header">
+   <div class="detail-title"><div class="row"><button class="btn" onclick="showView('projects',document.querySelector('[data-view=projects]'))">← Voltar</button></div><h2 style="margin-top:16px">${p.name}</h2><p>${p.client} · Criado no fluxo de revisão</p></div>
+   <div class="row"><span class="badge purple">Versão ${String(p.version).padStart(2,'0')}</span><button class="btn primary" onclick="copyLink()">Copiar link de revisão</button></div>
+  </div>
+  <div class="detail-grid">
+   <div>
+    <div class="card video">
+      <div class="video-screen"><button class="play-big" onclick="togglePlay(this)">▶</button></div>
+      <div class="controls"><div class="timeline" onclick="setProgress(event,this)"><div class="fill" style="width:46%"></div><div class="marker m1"></div><div class="marker m2"></div></div><div class="time-row"><span>00:41</span><span>03:12</span></div></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="section-head" style="margin:0 0 10px"><div><h2>Solicitações</h2><p>Feedback desta versão.</p></div><span class="badge yellow">${p.requests} abertas</span></div>
+      <div class="comment"><div class="comment-top"><span class="author">Cliente Demo</span><span class="minute-tag">00:23</span></div><p>Trocar o texto da oferta e aumentar o destaque visual.</p><span class="badge yellow">Em andamento</span></div>
+      <div class="comment"><div class="comment-top"><span class="author">Cliente Demo</span><span class="minute-tag">01:12</span></div><p>Adicionar logo da marca no encerramento.</p><span class="badge green">Resolvida</span></div>
+      <div class="comment"><div class="comment-top"><span class="author">Cliente Demo</span><span class="minute-tag">01:44</span></div><p>Diminuir a duração do glitch nesta transição.</p><span class="badge red">Pendente</span></div>
+    </div>
+   </div>
+   <div class="side-stack">
+    <div class="card">
+     <h3>Compartilhar projeto</h3><p>O cliente acessa sem criar conta.</p>
+     <div class="linkbox" style="margin-top:12px"><input value="reviewcut.local/revisao/${p.id}" readonly><button class="btn" onclick="copyLink()">Copiar</button></div>
+    </div>
+    <div class="card">
+     <h3>Histórico de versões</h3><p>Novas versões não apagam as anteriores.</p>
+     <div class="version"><div><strong>Versão ${String(p.version).padStart(2,'0')}</strong><small>10/09/2026 · atual</small></div><span class="badge purple">Atual</span></div>
+     ${Array.from({length:Math.min(3,p.version-1)},(_,i)=>{
+       const v=p.version-i-1; return `<div class="version"><div><strong>Versão ${String(v).padStart(2,'0')}</strong><small>${8-i}/09/2026</small></div><button class="btn">Visualizar</button></div>`;
+     }).join('')}
+     <button class="btn primary full" style="margin-top:10px" onclick="alert('No MVP real, aqui seria feito o upload de uma nova versão.')">+ Enviar nova versão</button>
+    </div>
+    <div class="card"><h3>Status do projeto</h3><p>Atualize o andamento conforme as solicitações forem atendidas.</p><select style="width:100%;margin-top:12px" onchange="changeProjectStatus(${p.id},this.value)">
+      <option ${p.status==='Em revisão'?'selected':''}>Em revisão</option>
+      <option ${p.status==='Pendente'?'selected':''}>Pendente</option>
+      <option ${p.status==='Aguardando cliente'?'selected':''}>Aguardando cliente</option>
+      <option ${p.status==='Resolvido'?'selected':''}>Resolvido</option>
+    </select></div>
+   </div>
+  </div>`;
+ showView('projectDetail');
+ document.getElementById('pageTitle').textContent=p.name;
+ document.getElementById('pageSubtitle').textContent='Detalhes do projeto e revisão da versão atual.';
+}
+function changeProjectStatus(id,value){
+ const p=projects.find(x=>x.id===id); if(p){p.status=value;renderProjects();renderDashboard();openProject(id)}
+}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function createProject(){
+ const name=document.getElementById('newProjectName').value.trim();
+ const client=document.getElementById('newProjectClient').value;
+ if(!name){alert('Informe o nome do projeto.');return}
+ projects.unshift({id:Date.now(),name,client,version:1,status:'Pendente',progress:0,requests:0});
+ document.getElementById('newProjectName').value='';
+ document.getElementById('newProjectDesc').value='';
+ closeModal('projectModal');renderProjects();renderDashboard();showView('projects',document.querySelector('[data-view=projects]'));
+}
+function createClient(){
+ const n=document.getElementById('newClientName').value.trim(), e=document.getElementById('newClientEmail').value.trim();
+ if(!n||!e){alert('Preencha nome e e-mail.');return}
+ const tr=document.createElement('tr');
+ tr.innerHTML=`<td><strong>${n}</strong></td><td>${e}</td><td>0</td><td><span class="badge green">Ativo</span></td><td><button class="btn">Ver projetos</button></td>`;
+ document.getElementById('clientTable').prepend(tr);
+ document.getElementById('newClientName').value='';document.getElementById('newClientEmail').value='';
+ closeModal('clientModal');
+}
+function openClientView(){
+ document.getElementById('editorApp').style.display='none';
+ document.getElementById('clientApp').style.display='block';
+ window.scrollTo(0,0);
+}
+function backToEditor(){
+ document.getElementById('clientApp').style.display='none';
+ document.getElementById('editorApp').style.display='flex';
+}
+function copyLink(){navigator.clipboard?.writeText('https://reviewcut.local/revisao/1');alert('Link de revisão copiado (protótipo).')}
+function togglePlay(btn){btn.textContent=btn.textContent==='▶'?'❚❚':'▶'}
+function setProgress(e,bar){
+ const r=bar.getBoundingClientRect();const pct=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+ bar.querySelector('.fill').style.width=(pct*100)+'%';
+ document.getElementById('currentTime').textContent='00:'+String(Math.round(23+pct*60)).padStart(2,'0');
+}
+function setMarkerFromInput(){alert('Ponto '+document.getElementById('minuteInput').value+' marcado para a solicitação (protótipo).')}
+function addComment(){
+ const text=document.getElementById('commentInput').value.trim(), min=document.getElementById('minuteInput').value.trim()||'00:00';
+ if(!text){alert('Escreva o comentário antes de enviar.');return}
+ const box=document.getElementById('clientComments');
+ const div=document.createElement('div');div.className='comment';
+ div.innerHTML=`<div class="comment-top"><span class="author">Você</span><span class="minute-tag">${min}</span></div><p>${text.replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</p><div class="comment-actions"><span class="badge red">Pendente</span></div>`;
+ box.prepend(div);
+ document.getElementById('commentInput').value='';
+}
+window.addEventListener('load',()=>{});
+</script>
+</body>
+</html>
