@@ -1,0 +1,88 @@
+import type { Client, Project } from "../types";
+
+export const mockClients: Client[] = [
+  {
+    id: 1,
+    name: "Cliente Demo",
+    email: "cliente@demo.com",
+    projects: 3,
+    status: "Ativo",
+  },
+  {
+    id: 2,
+    name: "Studio X",
+    email: "contato@studiox.com",
+    projects: 2,
+    status: "Ativo",
+  },
+  {
+    id: 3,
+    name: "Marca Alpha",
+    email: "marketing@alpha.com",
+    projects: 4,
+    status: "Concluído",
+  },
+];
+
+export const mockProjects: Project[] = [
+  {
+    id: 1,
+    name: "VSL — Curso Motion",
+    client: "Cliente Demo",
+    version: "03",
+    status: "Em revisão",
+    requests: 3,
+    progress: 72,
+    description: "Projeto de VSL para curso de motion design.",
+  },
+  {
+    id: 2,
+    name: "Reel — Lançamento",
+    client: "Studio X",
+    version: "02",
+    status: "Pendente",
+    requests: 2,
+    progress: 44,
+    description: "Reel para campanha de lançamento.",
+  },
+  {
+    id: 3,
+    name: "Ad — Produto",
+    client: "Marca Alpha",
+    version: "05",
+    status: "Resolvido",
+    requests: 0,
+    progress: 100,
+    description: "Criativo para campanha de produto.",
+  },
+  {
+    id: 4,
+    name: "Institucional 2026",
+    client: "Cliente Demo",
+    version: "01",
+    status: "Aguardando cliente",
+    requests: 1,
+    progress: 88,
+    description: "Vídeo institucional da empresa.",
+  },
+  {
+    id: 5,
+    name: "VSL — Black Friday",
+    client: "Studio X",
+    version: "04",
+    status: "Em revisão",
+    requests: 4,
+    progress: 61,
+    description: "VSL promocional de Black Friday.",
+  },
+  {
+    id: 6,
+    name: "Social Ads — Q4",
+    client: "Marca Alpha",
+    version: "02",
+    status: "Pendente",
+    requests: 5,
+    progress: 33,
+    description: "Pacote de anúncios para redes sociais.",
+  },
+];
