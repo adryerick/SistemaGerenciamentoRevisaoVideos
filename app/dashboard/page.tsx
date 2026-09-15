@@ -1,32 +1,6 @@
 import Sidebar from "../components/Sidebar";
-
-const projects = [
-  {
-    name: "VSL — Curso Motion",
-    client: "Cliente Demo",
-    version: "03",
-    status: "Em revisão",
-    requests: 3,
-    progress: 72,
-  },
-  {
-    name: "Reel — Lançamento",
-    client: "Studio X",
-    version: "02",
-    status: "Pendente",
-    requests: 2,
-    progress: 44,
-  },
-  {
-    name: "Ad — Produto",
-    client: "Marca Alpha",
-    version: "05",
-    status: "Resolvido",
-    requests: 0,
-    progress: 100,
-  },
-];
-
+import ProjectCard from "../components/ProjectCard";  
+import { mockProjects } from "../lib/mock-data";
 export default function Dashboard() {
   return (
     <main className="min-h-screen bg-[#0d0d0f] text-white">
@@ -129,72 +103,12 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
-            {projects.map((project) => (
-              <div
-                key={project.name}
-                className="overflow-hidden rounded-xl border border-[#29292d] bg-[#151517]"
-              >
-
-                <div className="flex h-40 items-center justify-center bg-gradient-to-br from-[#2e2e32] to-[#171719]">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg">
-                    ▶
-                  </div>
-                </div>
-
-                <div className="p-5">
-
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="rounded-full bg-[#222225] px-2.5 py-1 text-[11px] text-zinc-300">
-                      V{project.version}
-                    </span>
-
-                    <span className="text-[11px] text-zinc-500">
-                      {project.status}
-                    </span>
-                  </div>
-
-                  <h4 className="text-base font-semibold">
-                    {project.name}
-                  </h4>
-
-                  <p className="mt-1 text-xs text-zinc-500">
-                    {project.client}
-                  </p>
-
-                  <div className="mt-5">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">
-                        Progresso
-                      </span>
-
-                      <span className="text-xs text-zinc-400">
-                        {project.progress}%
-                      </span>
-                    </div>
-
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[#29292d]">
-                      <div
-                        className="h-full rounded-full bg-[#77717f]"
-                        style={{
-                          width: `${project.progress}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between">
-                    <span className="text-xs text-zinc-500">
-                      {project.requests} solicitações
-                    </span>
-
-                    <button className="rounded-lg border border-[#303035] bg-[#1b1b1e] px-3 py-2 text-xs text-zinc-300 transition hover:bg-[#232328]">
-                      Gerenciar
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-            ))}
+            {mockProjects.map((project) => (
+            <ProjectCard
+              key={project.name}
+              project={project}
+            />
+          ))}
 
           </div>
 
