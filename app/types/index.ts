@@ -29,9 +29,9 @@ export type VideoVersion = {
 export type ChangeRequest = {
   id: number;
   projectId: number;
-  videoVersionId: number;
   comment: string;
   timestamp?: string;
   status: "Pendente" | "Em andamento" | "Resolvido";
   createdAt: string;
+  videoVersionId: number;
 };

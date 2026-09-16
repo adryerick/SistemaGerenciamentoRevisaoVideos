@@ -5,17 +5,19 @@ import type { Client } from "../types";
 
 type NewClientModalProps = {
   isOpen: boolean;
+  client?: Client | null;
   onClose: () => void;
-  onCreate: (client: Client) => void;
+  onSubmit: (client: Pick<Client, "name" | "email">) => void;
 };
 
 export default function NewClientModal({
   isOpen,
+  client,
   onClose,
-  onCreate,
+  onSubmit,
 }: NewClientModalProps) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(client?.name ?? "");
+  const [email, setEmail] = useState(client?.email ?? "");
 
   if (!isOpen) {
     return null;
@@ -26,15 +28,10 @@ export default function NewClientModal({
       return;
     }
 
-    const newClient: Client = {
-      id: Date.now(),
+    onSubmit({
       name: name.trim(),
       email: email.trim(),
-      projects: 0,
-      status: "Ativo",
-    };
-
-    onCreate(newClient);
+    });
 
     setName("");
     setEmail("");
@@ -50,10 +47,12 @@ export default function NewClientModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
       <div className="w-full max-w-md rounded-2xl border border-[#29292d] bg-[#151517] p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-semibold">Novo cliente</h2>
+          <h2 className="text-lg font-semibold">
+            {client ? "Editar cliente" : "Novo cliente"}
+          </h2>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Cadastre um novo cliente no sistema.
+            {client ? "Atualize os dados do cliente." : "Cadastre um novo cliente no sistema."}
           </p>
         </div>
 
@@ -99,7 +98,7 @@ export default function NewClientModal({
             onClick={handleCreate}
             className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
           >
-            Criar cliente
+            {client ? "Salvar alterações" : "Criar cliente"}
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@ export default function ClientesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   useEffect(() => {
     async function loadClients() {
@@ -33,22 +34,45 @@ export default function ClientesPage() {
     void loadClients();
   }, []);
 
-  async function handleCreateClient(client: Client) {
+  async function handleSaveClient(data: Pick<Client, "name" | "email">) {
     try {
-      const response = await fetch("/api/clients", {
-        method: "POST",
+      const response = await fetch(editingClient ? `/api/clients/${editingClient.id}` : "/api/clients", {
+        method: editingClient ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: client.name, email: client.email }),
+        body: JSON.stringify(data),
       });
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.error ?? "Não foi possível criar o cliente.");
+        alert(result.error ?? "Não foi possível salvar o cliente.");
         return;
       }
 
-      setClients((currentClients) => [result, ...currentClients]);
+      setClients((currentClients) =>
+        editingClient
+          ? currentClients.map((client) => client.id === result.id ? result : client)
+          : [result, ...currentClients],
+      );
+      setEditingClient(null);
       setIsModalOpen(false);
+    } catch {
+      alert("Não foi possível conectar ao banco de dados.");
+    }
+  }
+
+  async function handleDeleteClient(client: Client) {
+    if (!window.confirm(`Excluir o cliente “${client.name}”?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/clients/${client.id}`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result.error ?? "Não foi possível excluir o cliente.");
+        return;
+      }
+      setClients((currentClients) => currentClients.filter((item) => item.id !== client.id));
     } catch {
       alert("Não foi possível conectar ao banco de dados.");
     }
@@ -69,7 +93,10 @@ export default function ClientesPage() {
             </div>
 
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setEditingClient(null);
+                setIsModalOpen(true);
+              }}
               className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               + Novo cliente
@@ -85,15 +112,27 @@ export default function ClientesPage() {
               Não foi possível carregar os clientes. Atualize a página e tente novamente.
             </div>
           ) : (
-            <ClientTable clients={clients} />
+            <ClientTable
+              clients={clients}
+              onEdit={(client) => {
+                setEditingClient(client);
+                setIsModalOpen(true);
+              }}
+              onDelete={handleDeleteClient}
+            />
           )}
         </div>
       </main>
 
       <NewClientModal
+        key={editingClient?.id ?? "new"}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreateClient}
+        client={editingClient}
+        onClose={() => {
+          setEditingClient(null);
+          setIsModalOpen(false);
+        }}
+        onSubmit={handleSaveClient}
       />
     </div>
   );

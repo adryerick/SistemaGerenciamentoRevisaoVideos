@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
   const editor = await getDemoEditor();
-  const [projects, clientsCount, videoVersionsCount, latestChangeRequests] =
+  const [projects, clientsCount, videoVersionsCount, pendingRequestsCount, latestChangeRequests] =
     await Promise.all([
       prisma.project.findMany({
         where: { editorId: editor.id },
@@ -21,6 +21,9 @@ export default async function Dashboard() {
       }),
       prisma.client.count({ where: { editorId: editor.id } }),
       prisma.videoVersion.count({ where: { project: { editorId: editor.id } } }),
+      prisma.changeRequest.count({
+        where: { project: { editorId: editor.id }, status: { not: "Resolvido" } },
+      }),
       prisma.changeRequest.findMany({
         where: { project: { editorId: editor.id } },
         include: { project: { include: { client: { select: { name: true } } } } },
@@ -31,9 +34,6 @@ export default async function Dashboard() {
   const projectCards = projects.map(toProjectDto);
   const activeProjects = projectCards.filter(
     (project) => project.status !== "Resolvido",
-  );
-  const pendingRequests = latestChangeRequests.filter(
-    (request) => request.status !== "Resolvido",
   );
 
   return (
@@ -89,7 +89,7 @@ export default async function Dashboard() {
               </p>
 
               <strong className="mt-3 block text-3xl">
-                {pendingRequests.length}
+                {pendingRequestsCount}
               </strong>
 
               <p className="mt-2 text-xs text-zinc-600">

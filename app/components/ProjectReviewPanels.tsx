@@ -130,6 +130,26 @@ export default function ProjectReviewPanels({
     );
   }
 
+  async function handleDeleteRequest(requestId: number) {
+    if (!window.confirm("Excluir esta solicitação de alteração?")) {
+      return;
+    }
+
+    const response = await fetch(`/api/solicitacoes/${requestId}`, {
+      method: "DELETE",
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      alert(result.error ?? "Não foi possível excluir a solicitação.");
+      return;
+    }
+
+    setRequests((currentRequests) =>
+      currentRequests.filter((request) => request.id !== requestId),
+    );
+  }
+
   async function handleCreateRequest() {
     if (!comment.trim() || !videoVersionId) {
       alert("Informe o comentário e selecione uma versão.");
@@ -294,23 +314,32 @@ export default function ProjectReviewPanels({
                   <span className="text-xs text-zinc-500">
                     {request.timestamp || "Sem minutagem"}
                   </span>
-                  <select
-                    value={request.status}
-                    onChange={(event) =>
-                      handleStatusChange(
-                        request.id,
-                        event.target.value as ChangeRequest["status"],
-                      )
-                    }
-                    aria-label={`Status da solicitação ${request.id}`}
-                    className="rounded-full border border-[#303035] bg-[#262429] px-2.5 py-1 text-[11px] text-[#aaa4b0] outline-none"
-                  >
-                    {requestStatuses.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={request.status}
+                      onChange={(event) =>
+                        handleStatusChange(
+                          request.id,
+                          event.target.value as ChangeRequest["status"],
+                        )
+                      }
+                      aria-label={`Status da solicitação ${request.id}`}
+                      className="rounded-full border border-[#303035] bg-[#262429] px-2.5 py-1 text-[11px] text-[#aaa4b0] outline-none"
+                    >
+                      {requestStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteRequest(request.id)}
+                      className="rounded-md border border-red-900/40 px-2 py-1 text-xs text-red-400 transition hover:border-red-800 hover:bg-red-950/30 hover:text-red-300"
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-3 text-sm text-zinc-300">{request.comment}</p>
                 <p className="mt-2 text-xs text-zinc-600">
