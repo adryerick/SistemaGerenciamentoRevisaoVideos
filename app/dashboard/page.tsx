@@ -1,7 +1,41 @@
+import Link from "next/link";
 import Sidebar from "../components/Sidebar";
-import ProjectCard from "../components/ProjectCard";  
-import { mockProjects } from "../lib/mock-data";
-export default function Dashboard() {
+import ProjectCard from "../components/ProjectCard";
+import { getDemoEditor } from "../lib/demo-editor";
+import { toProjectDto } from "../lib/presenters";
+import { prisma } from "../lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+export default async function Dashboard() {
+  const editor = await getDemoEditor();
+  const [projects, clientsCount, videoVersionsCount, latestChangeRequests] =
+    await Promise.all([
+      prisma.project.findMany({
+        where: { editorId: editor.id },
+        include: {
+          client: { select: { name: true } },
+          _count: { select: { changeRequests: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.client.count({ where: { editorId: editor.id } }),
+      prisma.videoVersion.count({ where: { project: { editorId: editor.id } } }),
+      prisma.changeRequest.findMany({
+        where: { project: { editorId: editor.id } },
+        include: { project: { include: { client: { select: { name: true } } } } },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      }),
+    ]);
+  const projectCards = projects.map(toProjectDto);
+  const activeProjects = projectCards.filter(
+    (project) => project.status !== "Resolvido",
+  );
+  const pendingRequests = latestChangeRequests.filter(
+    (request) => request.status !== "Resolvido",
+  );
+
   return (
     <main className="min-h-screen bg-[#0d0d0f] text-white">
       <div className="flex min-h-screen">
@@ -24,9 +58,12 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <button className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200">
+            <Link
+              href="/projetos"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+            >
               + Novo projeto
-            </button>
+            </Link>
           </div>
 
           {/* MÉTRICAS */}
@@ -38,11 +75,11 @@ export default function Dashboard() {
               </p>
 
               <strong className="mt-3 block text-3xl">
-                4
+                {activeProjects.length}
               </strong>
 
               <p className="mt-2 text-xs text-zinc-600">
-                Em revisão
+                Em andamento ou aguardando cliente
               </p>
             </div>
 
@@ -52,7 +89,7 @@ export default function Dashboard() {
               </p>
 
               <strong className="mt-3 block text-3xl">
-                7
+                {pendingRequests.length}
               </strong>
 
               <p className="mt-2 text-xs text-zinc-600">
@@ -66,11 +103,11 @@ export default function Dashboard() {
               </p>
 
               <strong className="mt-3 block text-3xl">
-                16
+                {videoVersionsCount}
               </strong>
 
               <p className="mt-2 text-xs text-zinc-600">
-                Nos últimos projetos
+                No histórico de projetos
               </p>
             </div>
 
@@ -80,7 +117,7 @@ export default function Dashboard() {
               </p>
 
               <strong className="mt-3 block text-3xl">
-                12
+                {clientsCount}
               </strong>
 
               <p className="mt-2 text-xs text-zinc-600">
@@ -103,12 +140,9 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
-            {mockProjects.map((project) => (
-            <ProjectCard
-              key={project.name}
-              project={project}
-            />
-          ))}
+            {projectCards.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
 
           </div>
 
@@ -133,35 +167,18 @@ export default function Dashboard() {
               <span>Status</span>
             </div>
 
-            <div className="grid grid-cols-5 items-center border-b border-[#29292d] px-5 py-4 text-sm">
-              <span>VSL — Curso Motion</span>
-              <span className="text-zinc-500">Cliente Demo</span>
-              <span className="text-zinc-400">00:23</span>
-              <span className="text-zinc-400">
-                Trocar texto da oferta.
-              </span>
-              <span className="text-zinc-400">Em andamento</span>
-            </div>
-
-            <div className="grid grid-cols-5 items-center border-b border-[#29292d] px-5 py-4 text-sm">
-              <span>Reel — Lançamento</span>
-              <span className="text-zinc-500">Studio X</span>
-              <span className="text-zinc-400">00:41</span>
-              <span className="text-zinc-400">
-                Aumentar volume do SFX.
-              </span>
-              <span className="text-zinc-400">Pendente</span>
-            </div>
-
-            <div className="grid grid-cols-5 items-center px-5 py-4 text-sm">
-              <span>Ad — Produto</span>
-              <span className="text-zinc-500">Marca Alpha</span>
-              <span className="text-zinc-400">01:12</span>
-              <span className="text-zinc-400">
-                Adicionar logo no final.
-              </span>
-              <span className="text-zinc-400">Resolvida</span>
-            </div>
+            {latestChangeRequests.map((request) => (
+              <div
+                key={request.id}
+                className="grid grid-cols-5 items-center border-b border-[#29292d] px-5 py-4 text-sm last:border-b-0"
+              >
+                <span>{request.project.name}</span>
+                <span className="text-zinc-500">{request.project.client.name}</span>
+                <span className="text-zinc-400">{request.timestamp ?? "—"}</span>
+                <span className="text-zinc-400">{request.comment}</span>
+                <span className="text-zinc-400">{request.status}</span>
+              </div>
+            ))}
 
           </div>
 

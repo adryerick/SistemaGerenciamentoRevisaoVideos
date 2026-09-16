@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Editor {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  clients   Client[]
+  projects  Project[]
+}
+
+model Client {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String
+  status    String    @default("Ativo")
+  createdAt DateTime  @default(now())
+  editorId  Int
+  editor    Editor    @relation(fields: [editorId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  changeRequests ChangeRequest[]
+
+  @@unique([editorId, email])
+  @@index([editorId])
+}
+
+model Project {
+  id             Int       @id @default(autoincrement())
+  name           String
+  description    String?
+  status         String    @default("Pendente")
+  currentVersion String    @default("01")
+  progress       Int       @default(0)
+  reviewToken    String    @unique @default(cuid())
+  reviewEnabled  Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  editorId       Int
+  clientId       Int
+  editor         Editor    @relation(fields: [editorId], references: [id], onDelete: Cascade)
+  client         Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  videoVersions  VideoVersion[]
+  changeRequests ChangeRequest[]
+
+  @@index([editorId])
+  @@index([clientId])
+}
+
+model VideoVersion {
+  id        Int       @id @default(autoincrement())
+  number    Int
+  fileName  String
+  sentAt    DateTime  @default(now())
+  projectId Int
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  changeRequests ChangeRequest[]
+
+  @@unique([projectId, number])
+  @@index([projectId])
+}
+
+model ChangeRequest {
+  id             Int          @id @default(autoincrement())
+  comment        String
+  timestamp      String?
+  status         String       @default("Pendente")
+  createdAt      DateTime     @default(now())
+  projectId      Int
+  videoVersionId Int
+  clientId       Int
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  videoVersion   VideoVersion @relation(fields: [videoVersionId], references: [id], onDelete: Cascade)
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@index([videoVersionId])
+  @@index([clientId])
+}

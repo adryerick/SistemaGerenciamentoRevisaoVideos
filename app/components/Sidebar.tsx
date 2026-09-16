@@ -1,6 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Sidebar() {
+  const pathname = usePathname();
+  const navigationItems = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/projetos", label: "Projetos" },
+    { href: "/clientes", label: "Clientes" },
+  ];
+
   return (
     <aside className="w-64 shrink-0 border-r border-[#29292d] bg-[#111113] p-5">
 
@@ -23,28 +33,24 @@ export default function Sidebar() {
 
       {/* Navegação */}
       <nav className="space-y-2">
+        {navigationItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
 
-        <Link
-          href="/dashboard"
-          className="block rounded-lg bg-[#1d1d21] px-3 py-2.5 text-sm text-white transition hover:bg-[#242428]"
-        >
-          Dashboard
-        </Link>
-
-        <Link
-          href="/projetos"
-          className="block rounded-lg px-3 py-2.5 text-sm text-zinc-500 transition hover:bg-[#1d1d21] hover:text-white"
-        >
-          Projetos
-        </Link>
-
-        <Link
-          href="/clientes"
-          className="block rounded-lg px-3 py-2.5 text-sm text-zinc-500 transition hover:bg-[#1d1d21] hover:text-white"
-        >
-          Clientes
-        </Link>
-
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`block rounded-lg px-3 py-2.5 text-sm transition ${
+                isActive
+                  ? "bg-[#1d1d21] text-white hover:bg-[#242428]"
+                  : "text-zinc-500 hover:bg-[#1d1d21] hover:text-white"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Usuário */}

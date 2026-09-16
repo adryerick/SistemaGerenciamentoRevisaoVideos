@@ -1,4 +1,9 @@
-import type { Client, Project } from "../types";
+import type {
+  ChangeRequest,
+  Client,
+  Project,
+  VideoVersion,
+} from "../types";
 
 export const mockClients: Client[] = [
   {
@@ -85,4 +90,36 @@ export const mockProjects: Project[] = [
     progress: 33,
     description: "Pacote de anúncios para redes sociais.",
   },
+];
+
+export const mockVideoVersions: VideoVersion[] = [
+  { id: 101, projectId: 1, number: 3, sentAt: "15/09/2026", fileName: "vsl-curso-motion-v03.mp4" },
+  { id: 102, projectId: 1, number: 2, sentAt: "12/09/2026", fileName: "vsl-curso-motion-v02.mp4" },
+  { id: 103, projectId: 1, number: 1, sentAt: "09/09/2026", fileName: "vsl-curso-motion-v01.mp4" },
+  { id: 201, projectId: 2, number: 2, sentAt: "14/09/2026", fileName: "reel-lancamento-v02.mp4" },
+  { id: 202, projectId: 2, number: 1, sentAt: "10/09/2026", fileName: "reel-lancamento-v01.mp4" },
+  { id: 301, projectId: 3, number: 5, sentAt: "13/09/2026", fileName: "ad-produto-v05.mp4" },
+  { id: 401, projectId: 4, number: 1, sentAt: "11/09/2026", fileName: "institucional-2026-v01.mp4" },
+  { id: 501, projectId: 5, number: 4, sentAt: "15/09/2026", fileName: "vsl-black-friday-v04.mp4" },
+  { id: 502, projectId: 5, number: 3, sentAt: "08/09/2026", fileName: "vsl-black-friday-v03.mp4" },
+  { id: 601, projectId: 6, number: 2, sentAt: "14/09/2026", fileName: "social-ads-q4-v02.mp4" },
+  { id: 602, projectId: 6, number: 1, sentAt: "07/09/2026", fileName: "social-ads-q4-v01.mp4" },
+];
+
+export const mockChangeRequests: ChangeRequest[] = [
+  { id: 1, projectId: 1, videoVersionId: 101, comment: "Trocar o texto da oferta.", timestamp: "00:23", status: "Em andamento", createdAt: "15/09/2026" },
+  { id: 2, projectId: 1, videoVersionId: 101, comment: "Ajustar a velocidade da transição inicial.", timestamp: "00:41", status: "Pendente", createdAt: "15/09/2026" },
+  { id: 3, projectId: 1, videoVersionId: 102, comment: "Revisar o volume da trilha sonora.", timestamp: "01:12", status: "Resolvido", createdAt: "13/09/2026" },
+  { id: 4, projectId: 2, videoVersionId: 201, comment: "Aumentar o volume do efeito sonoro.", timestamp: "00:41", status: "Pendente", createdAt: "14/09/2026" },
+  { id: 5, projectId: 2, videoVersionId: 201, comment: "Substituir a chamada final.", timestamp: "00:54", status: "Pendente", createdAt: "14/09/2026" },
+  { id: 6, projectId: 4, videoVersionId: 401, comment: "Confirmar a aprovação da versão atual.", status: "Pendente", createdAt: "11/09/2026" },
+  { id: 7, projectId: 5, videoVersionId: 501, comment: "Destacar melhor a condição promocional.", timestamp: "00:18", status: "Em andamento", createdAt: "15/09/2026" },
+  { id: 8, projectId: 5, videoVersionId: 501, comment: "Atualizar o texto do botão.", timestamp: "00:37", status: "Pendente", createdAt: "15/09/2026" },
+  { id: 9, projectId: 5, videoVersionId: 501, comment: "Diminuir o tempo da tela final.", timestamp: "00:49", status: "Pendente", createdAt: "15/09/2026" },
+  { id: 10, projectId: 5, videoVersionId: 502, comment: "Ajustar a cor do texto de apoio.", timestamp: "00:30", status: "Resolvido", createdAt: "10/09/2026" },
+  { id: 11, projectId: 6, videoVersionId: 601, comment: "Usar a versão mais recente do logo.", timestamp: "00:08", status: "Pendente", createdAt: "14/09/2026" },
+  { id: 12, projectId: 6, videoVersionId: 601, comment: "Aumentar o contraste da chamada.", timestamp: "00:16", status: "Pendente", createdAt: "14/09/2026" },
+  { id: 13, projectId: 6, videoVersionId: 601, comment: "Revisar o enquadramento do produto.", timestamp: "00:24", status: "Em andamento", createdAt: "14/09/2026" },
+  { id: 14, projectId: 6, videoVersionId: 602, comment: "Corrigir o nome da campanha.", timestamp: "00:31", status: "Resolvido", createdAt: "09/09/2026" },
+  { id: 15, projectId: 6, videoVersionId: 602, comment: "Diminuir a duração do encerramento.", timestamp: "00:45", status: "Resolvido", createdAt: "09/09/2026" },
 ];

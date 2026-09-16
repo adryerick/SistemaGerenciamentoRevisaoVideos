@@ -1,11 +1,14 @@
+import Link from "next/link";
 import type { Project } from "../types";
 
 type ProjectCardProps = {
   project: Project;
+  onDelete?: (project: Project) => void;
 };
 
 export default function ProjectCard({
   project,
+  onDelete,
 }: ProjectCardProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[#29292d] bg-[#151517]">
@@ -75,15 +78,29 @@ export default function ProjectCard({
         </div>
 
         {/* RODAPÉ */}
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex items-center justify-between gap-3">
 
           <span className="text-xs text-zinc-500">
             {project.requests} solicitações
           </span>
 
-          <button className="rounded-lg border border-[#303035] bg-[#1b1b1e] px-3 py-2 text-xs text-zinc-300 transition hover:bg-[#232328]">
-            Gerenciar
-          </button>
+          <div className="flex items-center gap-2">
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(project)}
+                className="rounded-lg border border-red-950 bg-red-950/20 px-3 py-2 text-xs text-red-300 transition hover:bg-red-950/40"
+              >
+                Excluir
+              </button>
+            )}
+            <Link
+              href={`/projetos/${project.id}`}
+              className="rounded-lg border border-[#303035] bg-[#1b1b1e] px-3 py-2 text-xs text-zinc-300 transition hover:bg-[#232328]"
+            >
+              Gerenciar
+            </Link>
+          </div>
 
         </div>
 
