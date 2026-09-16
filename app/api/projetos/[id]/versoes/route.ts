@@ -96,3 +96,74 @@ export async function POST(
 
   return Response.json(toVideoVersionDto(videoVersion), { status: 201 });
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: RouteContext<"/api/projetos/[id]/versoes">,
+) {
+  const { id } = await params;
+  const projectId = Number(id);
+
+  if (!Number.isInteger(projectId)) {
+    return Response.json({ error: "Projeto inválido." }, { status: 400 });
+  }
+
+  const body = await request.json();
+  const versionId = Number(body.versionId);
+
+  if (!Number.isInteger(versionId)) {
+    return Response.json({ error: "Versão inválida." }, { status: 400 });
+  }
+
+  const videoVersion = await prisma.videoVersion.findFirst({
+    where: {
+      id: versionId,
+      projectId,
+    },
+  });
+
+  if (!videoVersion) {
+    return Response.json({ error: "Versão não encontrada." }, { status: 404 });
+  }
+
+  const filePath = videoVersion.storagePath
+  ? path.join(
+      process.cwd(),
+      "public",
+      videoVersion.storagePath.slice(1),
+    )
+  : null;
+
+  await prisma.videoVersion.delete({
+    where: {
+      id: videoVersion.id,
+    },
+  });
+
+ if (filePath) {
+  await rm(filePath, { force: true });
+}
+
+  const latestVersion = await prisma.videoVersion.findFirst({
+    where: {
+      projectId,
+    },
+    orderBy: {
+      number: "desc",
+    },
+  });
+
+  await prisma.project.update({
+    where: {
+      id: projectId,
+    },
+    data: {
+      currentVersion: latestVersion
+    ? latestVersion.number.toString().padStart(2, "0")
+    : "",
+      status: latestVersion ? "Em revisão" : "Aguardando vídeo",
+    },
+  });
+
+  return Response.json({ success: true });
+}

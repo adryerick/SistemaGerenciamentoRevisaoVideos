@@ -60,7 +60,53 @@ export default function ProjectReviewPanels({
       setIsUploading(false);
     }
   }
+      async function handleDeleteVersion(versionId: number) {
+      const confirmed = window.confirm(
+        "Tem certeza que deseja excluir esta versão? O arquivo de vídeo também será apagado.",
+      );
 
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/projetos/${projectId}/versoes`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ versionId }),
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          alert(result.error ?? "Não foi possível excluir a versão.");
+          return;
+        }
+
+        setVersions((currentVersions) =>
+          currentVersions.filter((version) => version.id !== versionId),
+        );
+
+        setRequests((currentRequests) =>
+          currentRequests.filter(
+            (request) => request.videoVersionId !== versionId,
+          ),
+        );
+
+        if (videoVersionId === versionId) {
+          const remainingVersion = versions.find(
+            (version) => version.id !== versionId,
+          );
+
+          setVideoVersionId(remainingVersion?.id ?? 0);
+        }
+      } catch {
+        alert("Não foi possível excluir a versão. Tente novamente.");
+      }
+    }   
+    
   async function handleStatusChange(
     requestId: number,
     status: ChangeRequest["status"],
@@ -149,13 +195,24 @@ export default function ProjectReviewPanels({
               className="rounded-lg border border-[#29292d] bg-[#111113] p-4"
             >
               <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
                 <span className="rounded-full bg-[#222225] px-2.5 py-1 text-[11px] text-zinc-300">
                   V{videoVersion.number.toString().padStart(2, "0")}
                 </span>
-                <span className="text-xs text-zinc-500">
-                  Enviada em {videoVersion.sentAt}
-                </span>
+
+                <button
+                  type="button"
+                  onClick={() => handleDeleteVersion(videoVersion.id)}
+                  className="rounded-md border border-red-900/40 px-2 py-1 text-xs text-red-400 transition hover:border-red-800 hover:bg-red-950/30 hover:text-red-300"
+                >
+                  Excluir
+                </button>
               </div>
+
+              <span className="text-xs text-zinc-500">
+                Enviada em {videoVersion.sentAt}
+              </span>
+            </div>
               <p className="mt-3 text-sm text-zinc-300">{videoVersion.fileName}</p>
               {videoVersion.videoUrl ? (
                 <video
