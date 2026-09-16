@@ -44,3 +44,6 @@ next-env.d.ts
 /app/generated/prisma/
 /prisma/*.db
 /prisma/*.db-journal
+
+# uploaded videos for local MVP testing
+/public/uploads/

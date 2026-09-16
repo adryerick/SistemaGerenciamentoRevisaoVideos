@@ -53,12 +53,15 @@ model Project {
 }
 
 model VideoVersion {
-  id        Int       @id @default(autoincrement())
-  number    Int
-  fileName  String
-  sentAt    DateTime  @default(now())
-  projectId Int
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id          Int       @id @default(autoincrement())
+  number      Int
+  fileName    String
+  storagePath String?
+  mimeType    String?
+  fileSize    Int?
+  sentAt      DateTime  @default(now())
+  projectId   Int
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   changeRequests ChangeRequest[]
 
   @@unique([projectId, number])

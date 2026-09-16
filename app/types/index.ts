@@ -23,6 +23,7 @@ export type VideoVersion = {
   number: number;
   sentAt: string;
   fileName: string;
+  videoUrl?: string;
 };
 
 export type ChangeRequest = {

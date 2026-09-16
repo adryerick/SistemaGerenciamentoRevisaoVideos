@@ -1,5 +1,9 @@
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import { getDemoEditor } from "../../../lib/demo-editor";
 import { prisma } from "../../../lib/prisma";
+
+export const runtime = "nodejs";
 
 export async function PATCH(
   request: Request,
@@ -54,5 +58,16 @@ export async function DELETE(
   }
 
   await prisma.project.delete({ where: { id: project.id } });
+
+  const uploadsRoot = path.resolve(process.cwd(), "public", "uploads", "projects");
+  const projectUploads = path.resolve(uploadsRoot, String(project.id));
+  if (projectUploads.startsWith(`${uploadsRoot}${path.sep}`)) {
+    try {
+      await rm(projectUploads, { recursive: true, force: true });
+    } catch {
+      // The database deletion remains valid even if local file cleanup is unavailable.
+    }
+  }
+
   return Response.json({ success: true });
 }

@@ -22,32 +22,41 @@ export default function ProjectReviewPanels({
 }: ProjectReviewPanelsProps) {
   const [versions, setVersions] = useState(videoVersions);
   const [requests, setRequests] = useState(changeRequests);
-  const [fileName, setFileName] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [videoVersionId, setVideoVersionId] = useState(videoVersions[0]?.id ?? 0);
 
   async function handleCreateVersion() {
-    if (!fileName.trim()) {
-      alert("Informe o nome do arquivo da nova versão.");
+    if (!videoFile) {
+      alert("Selecione o arquivo de vídeo da nova versão.");
       return;
     }
 
-    const response = await fetch(`/api/projetos/${projectId}/versoes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName }),
-    });
-    const result = await response.json();
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("video", videoFile);
+      const response = await fetch(`/api/projetos/${projectId}/versoes`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
 
-    if (!response.ok) {
-      alert(result.error ?? "Não foi possível registrar a versão.");
-      return;
+      if (!response.ok) {
+        alert(result.error ?? "Não foi possível enviar a versão.");
+        return;
+      }
+
+      setVersions((currentVersions) => [result, ...currentVersions]);
+      setVideoVersionId(result.id);
+      setVideoFile(null);
+    } catch {
+      alert("Não foi possível enviar o vídeo. Tente novamente.");
+    } finally {
+      setIsUploading(false);
     }
-
-    setVersions((currentVersions) => [result, ...currentVersions]);
-    setVideoVersionId(result.id);
-    setFileName("");
   }
 
   async function handleStatusChange(
@@ -112,21 +121,23 @@ export default function ProjectReviewPanels({
 
         <div className="mt-5 space-y-3">
           <div className="rounded-lg border border-[#29292d] bg-[#111113] p-4">
-            <p className="text-sm font-medium text-white">Registrar nova versão</p>
-            <div className="mt-3 flex gap-3">
+            <p className="text-sm font-medium text-white">Enviar nova versão</p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
               <input
-                value={fileName}
-                onChange={(event) => setFileName(event.target.value)}
-                placeholder="Ex.: campanha-v04.mp4"
-                className="min-w-0 flex-1 rounded-lg border border-[#303035] bg-[#151517] px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600"
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm,video/x-m4v,.mp4,.mov,.webm,.m4v"
+                onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)}
+                className="min-w-0 flex-1 rounded-lg border border-[#303035] bg-[#151517] px-3 py-2 text-sm text-zinc-300 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-xs file:text-zinc-200"
               />
               <button
                 onClick={handleCreateVersion}
-                className="shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+                disabled={isUploading}
+                className="shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Adicionar
+                {isUploading ? "Enviando..." : "Enviar vídeo"}
               </button>
             </div>
+            <p className="mt-2 text-xs text-zinc-600">MP4, MOV, WebM ou M4V · até 250 MB</p>
           </div>
 
           {versions.map((videoVersion) => (
@@ -143,6 +154,16 @@ export default function ProjectReviewPanels({
                 </span>
               </div>
               <p className="mt-3 text-sm text-zinc-300">{videoVersion.fileName}</p>
+              {videoVersion.videoUrl ? (
+                <video
+                  controls
+                  preload="metadata"
+                  src={videoVersion.videoUrl}
+                  className="mt-3 w-full rounded-lg bg-black"
+                />
+              ) : (
+                <p className="mt-2 text-xs text-zinc-600">Arquivo de vídeo ainda não enviado.</p>
+              )}
             </div>
           ))}
         </div>

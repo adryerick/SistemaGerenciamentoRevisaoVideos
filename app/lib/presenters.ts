@@ -29,6 +29,7 @@ type VideoVersionRecord = {
   projectId: number;
   number: number;
   fileName: string;
+  storagePath: string | null;
   sentAt: Date;
 };
 
@@ -71,6 +72,7 @@ export function toVideoVersionDto(version: VideoVersionRecord): VideoVersion {
     projectId: version.projectId,
     number: version.number,
     fileName: version.fileName,
+    videoUrl: version.storagePath ?? undefined,
     sentAt: version.sentAt.toLocaleDateString("pt-BR"),
   };
 }
