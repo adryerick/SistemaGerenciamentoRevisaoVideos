@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import NewProjectModal from "../components/NewProjectModal";
 import ProjectCard from "../components/ProjectCard";
 import Sidebar from "../components/Sidebar";
-import { mockClients, mockProjects } from "../lib/mock-data";
 import type { Client, Project } from "../types";
 
 export default function Projects() {
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("Todos os status");
@@ -26,17 +27,27 @@ export default function Projects() {
 
   useEffect(() => {
     async function loadData() {
-      const [projectsResponse, clientsResponse] = await Promise.all([
-        fetch("/api/projetos"),
-        fetch("/api/clients"),
-      ]);
+      try {
+        const [projectsResponse, clientsResponse] = await Promise.all([
+          fetch("/api/projetos"),
+          fetch("/api/clients"),
+        ]);
 
-      if (projectsResponse.ok) {
-        setProjects(await projectsResponse.json());
-      }
+        if (!projectsResponse.ok || !clientsResponse.ok) {
+          setLoadError(true);
+          return;
+        }
 
-      if (clientsResponse.ok) {
-        setClients(await clientsResponse.json());
+        const [loadedProjects, loadedClients] = await Promise.all([
+          projectsResponse.json(),
+          clientsResponse.json(),
+        ]);
+        setProjects(loadedProjects);
+        setClients(loadedClients);
+      } catch {
+        setLoadError(true);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -118,6 +129,7 @@ export default function Projects() {
 
             <button
               onClick={() => setShowModal(true)}
+              disabled={isLoading}
               className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               + Novo projeto
@@ -153,7 +165,15 @@ export default function Projects() {
           {/* PROJETOS */}
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
 
-            {filteredProjects.length > 0 ? (
+            {isLoading ? (
+              <p className="rounded-xl border border-[#29292d] bg-[#151517] px-5 py-8 text-sm text-zinc-500">
+                Carregando projetos...
+              </p>
+            ) : loadError ? (
+              <p className="rounded-xl border border-red-950 bg-red-950/20 px-5 py-8 text-sm text-red-300">
+                Não foi possível carregar os projetos. Atualize a página e tente novamente.
+              </p>
+            ) : filteredProjects.length > 0 ? (
               filteredProjects.map((project) => (
                 <ProjectCard
                   key={project.id}

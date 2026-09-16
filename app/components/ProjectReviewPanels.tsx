@@ -24,17 +24,19 @@ export default function ProjectReviewPanels({
   const [requests, setRequests] = useState(changeRequests);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [videoVersionId, setVideoVersionId] = useState(videoVersions[0]?.id ?? 0);
 
   async function handleCreateVersion() {
     if (!videoFile) {
-      alert("Selecione o arquivo de vídeo da nova versão.");
+      setUploadError("Selecione o arquivo de vídeo da nova versão.");
       return;
     }
 
     setIsUploading(true);
+    setUploadError("");
     try {
       const formData = new FormData();
       formData.append("video", videoFile);
@@ -42,10 +44,10 @@ export default function ProjectReviewPanels({
         method: "POST",
         body: formData,
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        alert(result.error ?? "Não foi possível enviar a versão.");
+        setUploadError(result.error ?? "Não foi possível enviar a versão. Tente novamente.");
         return;
       }
 
@@ -53,7 +55,7 @@ export default function ProjectReviewPanels({
       setVideoVersionId(result.id);
       setVideoFile(null);
     } catch {
-      alert("Não foi possível enviar o vídeo. Tente novamente.");
+      setUploadError("Não foi possível enviar o vídeo. Tente novamente.");
     } finally {
       setIsUploading(false);
     }
@@ -138,6 +140,7 @@ export default function ProjectReviewPanels({
               </button>
             </div>
             <p className="mt-2 text-xs text-zinc-600">MP4, MOV, WebM ou M4V · até 250 MB</p>
+            {uploadError && <p className="mt-2 text-xs text-red-300">{uploadError}</p>}
           </div>
 
           {versions.map((videoVersion) => (

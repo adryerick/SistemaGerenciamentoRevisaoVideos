@@ -28,7 +28,7 @@ export async function POST(
     return Response.json({ error: "Projeto inválido." }, { status: 400 });
   }
 
-  if (!(video instanceof File) || video.size === 0) {
+  if (!video || typeof video === "string" || video.size === 0) {
     return Response.json({ error: "Selecione um arquivo de vídeo." }, { status: 400 });
   }
 

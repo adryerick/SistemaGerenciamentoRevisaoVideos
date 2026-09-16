@@ -4,19 +4,29 @@ import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import ClientTable from "../components/ClientTable";
 import NewClientModal from "../components/NewClientModal";
-import { mockClients } from "../lib/mock-data";
 import type { Client } from "../types";
 
 export default function ClientesPage() {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadClients() {
-      const response = await fetch("/api/clients");
+      try {
+        const response = await fetch("/api/clients");
 
-      if (response.ok) {
+        if (!response.ok) {
+          setLoadError(true);
+          return;
+        }
+
         setClients(await response.json());
+      } catch {
+        setLoadError(true);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -66,7 +76,17 @@ export default function ClientesPage() {
             </button>
           </div>
 
-          <ClientTable clients={clients} />
+          {isLoading ? (
+            <div className="rounded-xl border border-[#29292d] bg-[#151517] px-5 py-10 text-sm text-zinc-500">
+              Carregando clientes...
+            </div>
+          ) : loadError ? (
+            <div className="rounded-xl border border-red-950 bg-red-950/20 px-5 py-10 text-sm text-red-300">
+              Não foi possível carregar os clientes. Atualize a página e tente novamente.
+            </div>
+          ) : (
+            <ClientTable clients={clients} />
+          )}
         </div>
       </main>
 
