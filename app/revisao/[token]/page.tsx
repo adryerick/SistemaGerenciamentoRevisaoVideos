@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import PublicReviewForm from "../../components/PublicReviewForm";
+import VideoPlayer from "../../components/VideoPlayer";
 import { toVideoVersionDto } from "../../lib/presenters";
 import { prisma } from "../../lib/prisma";
 
@@ -50,11 +51,8 @@ export default async function PublicReviewPage({
                   </span>
                 </div>
                 {videoVersion.videoUrl && (
-                  <video
-                    controls
-                    preload="metadata"
+                  <VideoPlayer
                     src={`/api/revisao/${token}/videos/${videoVersion.id}`}
-                    className="mt-3 w-full rounded-lg bg-black"
                   />
                 )}
               </div>

@@ -7,13 +7,15 @@
     "build": "next build",
     "db:seed": "tsx prisma/seed.ts",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:video": "tsx --test tests/video-compatibility.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
+    "ffmpeg-static": "^5.3.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -32,6 +34,7 @@
     "typescript": "^5"
   },
   "allowScripts": {
+    "ffmpeg-static@5.3.0": true,
     "better-sqlite3@13.0.3": true,
     "better-sqlite3@12.11.1": true,
     "@prisma/engines@7.10.0": true,

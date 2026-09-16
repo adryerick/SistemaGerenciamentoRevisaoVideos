@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import VideoPlayer from "./VideoPlayer";
+import { VIDEO_ACCEPT, validateVideoFile } from "../lib/video-formats";
 import type { ChangeRequest, VideoVersion } from "../types";
 
 type ProjectReviewPanelsProps = {
@@ -25,6 +27,7 @@ export default function ProjectReviewPanels({
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const videoInput = useRef<HTMLInputElement>(null);
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [videoVersionId, setVideoVersionId] = useState(videoVersions[0]?.id ?? 0);
@@ -35,6 +38,11 @@ export default function ProjectReviewPanels({
       return;
     }
 
+    const validationError = validateVideoFile(videoFile.name, videoFile.size);
+    if (validationError) {
+      setUploadError(validationError);
+      return;
+    }
     setIsUploading(true);
     setUploadError("");
     try {
@@ -54,6 +62,7 @@ export default function ProjectReviewPanels({
       setVersions((currentVersions) => [result, ...currentVersions]);
       setVideoVersionId(result.id);
       setVideoFile(null);
+      if (videoInput.current) videoInput.current.value = "";
     } catch {
       setUploadError("Não foi possível enviar o vídeo. Tente novamente.");
     } finally {
@@ -193,7 +202,10 @@ export default function ProjectReviewPanels({
             <div className="mt-3 flex flex-col gap-3 sm:flex-row">
               <input
                 type="file"
-                accept="video/mp4,video/quicktime,video/webm,video/x-m4v,.mp4,.mov,.webm,.m4v"
+                ref={videoInput}
+                aria-label="Arquivo da nova versão"
+                disabled={isUploading}
+                accept={VIDEO_ACCEPT}
                 onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)}
                 className="min-w-0 flex-1 rounded-lg border border-[#303035] bg-[#151517] px-3 py-2 text-sm text-zinc-300 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-xs file:text-zinc-200"
               />
@@ -202,10 +214,15 @@ export default function ProjectReviewPanels({
                 disabled={isUploading}
                 className="shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isUploading ? "Enviando..." : "Enviar vídeo"}
+                {isUploading ? "Preparando vídeo..." : "Enviar vídeo"}
               </button>
             </div>
-            <p className="mt-2 text-xs text-zinc-600">MP4, MOV, WebM ou M4V · até 250 MB</p>
+            <p className="mt-2 text-xs text-zinc-400">MP4, MOV, WebM, M4V, MKV, AVI, MTS ou M2TS · até 250 MB</p>
+            <p role="status" className="mt-2 text-xs text-zinc-400">
+              {isUploading
+                ? "Enviando e preparando para reprodução. Isso pode levar alguns minutos; mantenha esta página aberta."
+                : "O vídeo será convertido automaticamente para reprodução no navegador."}
+            </p>
             {uploadError && <p className="mt-2 text-xs text-red-300">{uploadError}</p>}
           </div>
 
@@ -235,12 +252,7 @@ export default function ProjectReviewPanels({
             </div>
               <p className="mt-3 text-sm text-zinc-300">{videoVersion.fileName}</p>
               {videoVersion.videoUrl ? (
-                <video
-                  controls
-                  preload="metadata"
-                  src={videoVersion.videoUrl}
-                  className="mt-3 w-full rounded-lg bg-black"
-                />
+                <VideoPlayer key={videoVersion.videoUrl} src={videoVersion.videoUrl} />
               ) : (
                 <p className="mt-2 text-xs text-zinc-600">Arquivo de vídeo ainda não enviado.</p>
               )}

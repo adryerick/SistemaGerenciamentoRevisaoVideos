@@ -1,19 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { toVideoVersionDto } from "../../../../lib/presenters";
 import { prisma } from "../../../../lib/prisma";
+import { convertVideoForBrowser, VideoConversionError } from "../../../../lib/video-conversion";
+import { validateVideoFile } from "../../../../lib/video-formats";
 
 export const runtime = "nodejs";
-
-const MAX_VIDEO_SIZE = 250 * 1024 * 1024;
-const supportedExtensions = new Set(["mp4", "mov", "webm", "m4v"]);
-const mimeTypes: Record<string, string> = {
-  mp4: "video/mp4",
-  mov: "video/quicktime",
-  webm: "video/webm",
-  m4v: "video/x-m4v",
-};
 
 export async function POST(
   request: Request,
@@ -21,7 +15,12 @@ export async function POST(
 ) {
   const { id } = await params;
   const projectId = Number(id);
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return Response.json({ error: "Envio incompleto ou inválido. Selecione o vídeo e tente novamente." }, { status: 400 });
+  }
   const video = formData.get("video");
 
   if (!Number.isInteger(projectId)) {
@@ -32,50 +31,42 @@ export async function POST(
     return Response.json({ error: "Selecione um arquivo de vídeo." }, { status: 400 });
   }
 
-  if (video.size > MAX_VIDEO_SIZE) {
-    return Response.json(
-      { error: "O vídeo deve ter no máximo 250 MB para os testes locais." },
-      { status: 400 },
-    );
-  }
-
-  const fileExtension = video.name.split(".").pop()?.toLowerCase() ?? "";
-  if (!supportedExtensions.has(fileExtension)) {
-    return Response.json(
-      { error: "Envie um vídeo nos formatos MP4, MOV, WebM ou M4V." },
-      { status: 400 },
-    );
-  }
-
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    include: { videoVersions: { select: { number: true } } },
-  });
-
-  if (!project) {
-    return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
-  }
-
-  const nextNumber = Math.max(0, ...project.videoVersions.map((version) => version.number)) + 1;
+  const validationError = validateVideoFile(video.name, video.size);
+  if (validationError) return Response.json({ error: validationError }, { status: 400 });
   const directory = path.join(process.cwd(), "public", "uploads", "projects", String(projectId));
-  const storedFileName = `${randomUUID()}.${fileExtension}`;
+  const storedFileName = `${randomUUID()}.mp4`;
   const filePath = path.join(directory, storedFileName);
   const storagePath = `/uploads/projects/${projectId}/${storedFileName}`;
 
-  await mkdir(directory, { recursive: true });
-  await writeFile(filePath, Buffer.from(await video.arrayBuffer()));
-
-  let videoVersion;
+  let temporaryDirectory: string | undefined;
+  let publishedFile = false;
   try {
-    videoVersion = await prisma.$transaction(async (transaction) => {
+    const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
+    if (!project) return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
+
+    temporaryDirectory = await mkdtemp(path.join(tmpdir(), "videoreview-convert-"));
+    const input = path.join(temporaryDirectory, "input");
+    const output = path.join(temporaryDirectory, "playback.mp4");
+    await writeFile(input, Buffer.from(await video.arrayBuffer()));
+    await convertVideoForBrowser(input, output);
+    const fileInfo = await stat(output);
+    await mkdir(directory, { recursive: true });
+    publishedFile = true;
+    await copyFile(output, filePath);
+
+    const videoVersion = await prisma.$transaction(async (transaction) => {
+      const latest = await transaction.videoVersion.findFirst({
+        where: { projectId }, orderBy: { number: "desc" }, select: { number: true },
+      });
+      const nextNumber = (latest?.number ?? 0) + 1;
       const createdVersion = await transaction.videoVersion.create({
         data: {
           projectId,
           number: nextNumber,
           fileName: video.name,
           storagePath,
-          mimeType: video.type || mimeTypes[fileExtension],
-          fileSize: video.size,
+          mimeType: "video/mp4",
+          fileSize: fileInfo.size,
         },
       });
 
@@ -89,12 +80,19 @@ export async function POST(
 
       return createdVersion;
     });
+    return Response.json(toVideoVersionDto(videoVersion), { status: 201 });
   } catch (error) {
-    await rm(filePath, { force: true });
-    throw error;
+    if (publishedFile) await rm(filePath, { force: true }).catch(console.error);
+    if (error instanceof VideoConversionError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
+    console.error("Falha ao salvar vídeo", error);
+    return Response.json({ error: "Não foi possível salvar o vídeo. Verifique o espaço em disco e reinicie o servidor se o banco foi atualizado." }, { status: 500 });
+  } finally {
+    if (temporaryDirectory && path.resolve(temporaryDirectory).startsWith(path.join(path.resolve(tmpdir()), "videoreview-convert-"))) {
+      await rm(temporaryDirectory, { recursive: true, force: true }).catch(console.error);
+    }
   }
-
-  return Response.json(toVideoVersionDto(videoVersion), { status: 201 });
 }
 
 export async function DELETE(

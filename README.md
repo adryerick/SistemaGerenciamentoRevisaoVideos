@@ -1,5 +1,30 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Compatibilidade de vídeo no MVP local
+
+Novos uploads são preparados com FFmpeg antes de registrar a versão: MP4 com vídeo
+H.264 de 8 bits (`yuv420p`), áudio AAC estéreo (quando houver áudio) e metadados no
+início do arquivo (`faststart`). Aceita MP4, MOV, M4V, WebM, MKV, AVI, MTS e M2TS
+até 250 MB. A extensão sozinha não garante que o conteúdo seja decodificável.
+
+Instale com `npm install` e reinicie `npm run dev` após atualizar as dependências.
+O pacote `ffmpeg-static` baixa um executável para o sistema operacional atual.
+O processamento é local, pode levar minutos e tem limite de 10 minutos por vídeo;
+a página de envio deve permanecer aberta. O arquivo original no computador do
+editor não é alterado. O servidor guarda a versão convertida para reprodução.
+Arquivos enviados antes desta mudança devem ser reenviados como nova versão.
+
+Não é uma garantia de suporte a todo codec: arquivos corrompidos, protegidos ou
+sem faixa de vídeo são rejeitados. A conversão para 8 bits é voltada a revisão;
+não substitui o master e não faz gerenciamento de cor/tone mapping de HDR.
+Hospedagem serverless com disco temporário/timeout curto exige armazenamento e
+fila de processamento externos. Nenhum serviço externo foi configurado aqui.
+
+`npm run test:video` verifica H.264, HEVC de 10 bits, WebM/VP9, ProRes sem áudio,
+arquivos inválidos e pedidos de trechos do vídeo. Com `VIDEO_TEST_BASE_URL`
+apontando para um servidor local de teste, também verifica upload, reprodução
+pública e desativação do link, criando e removendo seus próprios dados temporários.
+
 ## Getting Started
 
 First, run the development server:
