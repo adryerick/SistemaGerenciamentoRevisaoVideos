@@ -1,3 +1,4 @@
+import { withEditor } from "../../../lib/auth";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { getDemoEditor } from "../../../lib/demo-editor";
@@ -5,17 +6,34 @@ import { prisma } from "../../../lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: RouteContext<"/api/projetos/[id]">,
 ) {
   const { id } = await params;
   const projectId = Number(id);
-  const { reviewEnabled } = await request.json();
-
-  if (!Number.isInteger(projectId) || typeof reviewEnabled !== "boolean") {
+  const body = await request.json().catch(() => null);
+  if (!Number.isSafeInteger(projectId) || projectId <= 0 || !body || typeof body !== "object" || Array.isArray(body)) {
     return Response.json({ error: "Dados inválidos." }, { status: 400 });
   }
+  const data: { reviewEnabled?: boolean; name?: string; description?: string; status?: string } = {};
+  if ("reviewEnabled" in body) {
+    if (typeof body.reviewEnabled !== "boolean") return Response.json({ error: "Link inválido." }, { status: 400 });
+    data.reviewEnabled = body.reviewEnabled;
+  }
+  if ("name" in body) {
+    if (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 120) return Response.json({ error: "Informe um nome de até 120 caracteres." }, { status: 400 });
+    data.name = body.name.trim();
+  }
+  if ("description" in body) {
+    if (typeof body.description !== "string" || body.description.length > 2000) return Response.json({ error: "Descrição limitada a 2.000 caracteres." }, { status: 400 });
+    data.description = body.description.trim();
+  }
+  if ("status" in body) {
+    if (!["Pendente", "Em revisão", "Aguardando cliente", "Resolvido"].includes(body.status)) return Response.json({ error: "Status inválido." }, { status: 400 });
+    data.status = body.status;
+  }
+  if (!Object.keys(data).length) return Response.json({ error: "Nenhuma alteração informada." }, { status: 400 });
 
   const editor = await getDemoEditor();
   const project = await prisma.project.findFirst({
@@ -29,14 +47,14 @@ export async function PATCH(
 
   const updatedProject = await prisma.project.update({
     where: { id: project.id },
-    data: { reviewEnabled },
-    select: { reviewEnabled: true },
+    data,
+    select: { reviewEnabled: true, name: true, description: true, status: true },
   });
 
   return Response.json(updatedProject);
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: RouteContext<"/api/projetos/[id]">,
 ) {
@@ -71,3 +89,6 @@ export async function DELETE(
 
   return Response.json({ success: true });
 }
+
+export const PATCH = withEditor(handlePATCH);
+export const DELETE = withEditor(handleDELETE);

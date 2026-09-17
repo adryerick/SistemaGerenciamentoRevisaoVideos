@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-test/
 /out/
 
 # production
@@ -47,3 +48,6 @@ next-env.d.ts
 
 # uploaded videos for local MVP testing
 /public/uploads/
+
+# Local authentication secrets and one-time setup token
+/.local/

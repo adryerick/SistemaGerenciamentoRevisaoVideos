@@ -15,29 +15,39 @@ export default function ReviewLinkPanel({
 }: ReviewLinkPanelProps) {
   const [reviewEnabled, setReviewEnabled] = useState(initialReviewEnabled);
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const reviewPath = `/revisao/${reviewToken}`;
 
   async function copyLink() {
+    setError("");
+    try {
     await navigator.clipboard.writeText(
       new URL(reviewPath, window.location.origin).toString(),
     );
     setCopied(true);
+    } catch { setError("Não foi possível copiar automaticamente. Abra o link abaixo e copie o endereço do navegador."); }
   }
 
   async function updateReviewAccess() {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
     const response = await fetch(`/api/projetos/${projectId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reviewEnabled: !reviewEnabled }),
     });
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      alert(result.error ?? "Não foi possível atualizar o link.");
+      setError(result.error ?? "Não foi possível atualizar o link.");
       return;
     }
 
     setReviewEnabled(result.reviewEnabled);
+    } catch { setError("Falha de conexão. Tente novamente."); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -74,11 +84,15 @@ export default function ReviewLinkPanel({
         <button
           type="button"
           onClick={() => void updateReviewAccess()}
+          disabled={busy}
           className="rounded-lg border border-[#303035] px-4 py-2.5 text-sm text-zinc-300 transition hover:bg-[#232328]"
         >
           {reviewEnabled ? "Desativar link" : "Ativar link"}
         </button>
       </div>
+      <a href={reviewPath} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm text-zinc-300 underline">Abrir revisão em outra aba</a>
+      <p className="mt-2 text-xs text-zinc-500">Se o endereço começa com localhost, ele funciona apenas neste computador. Para clientes externos, será necessário publicar o sistema.</p>
+      {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
     </section>
   );
 }

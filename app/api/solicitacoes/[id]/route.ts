@@ -1,15 +1,18 @@
+import { withEditor } from "../../../lib/auth";
 import { getDemoEditor } from "../../../lib/demo-editor";
 import { toChangeRequestDto } from "../../../lib/presenters";
 import { prisma } from "../../../lib/prisma";
 
 const statuses = ["Pendente", "Em andamento", "Resolvido"];
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: RouteContext<"/api/solicitacoes/[id]">,
 ) {
   const { id } = await params;
-  const { status } = await request.json();
+  const body = await request.json().catch(() => null);
+  const status = body?.status;
+  if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0) return Response.json({ error: "Solicitação inválida." }, { status: 400 });
 
   if (!statuses.includes(status)) {
     return Response.json({ error: "Status inválido." }, { status: 400 });
@@ -37,7 +40,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: RouteContext<"/api/solicitacoes/[id]">,
 ) {
@@ -61,3 +64,6 @@ export async function DELETE(
   await prisma.changeRequest.delete({ where: { id: changeRequest.id } });
   return Response.json({ success: true });
 }
+
+export const PATCH = withEditor(handlePATCH);
+export const DELETE = withEditor(handleDELETE);

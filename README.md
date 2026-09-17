@@ -1,61 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sistema de Gerenciamento de Revisão de Vídeos
 
-## Compatibilidade de vídeo no MVP local
+MVP acadêmico para centralizar versões de vídeos e solicitações de alteração entre
+um editor e seus clientes. Next.js 16, React 19, TypeScript, Tailwind, Prisma e SQLite.
 
-Novos uploads são preparados com FFmpeg antes de registrar a versão: MP4 com vídeo
-H.264 de 8 bits (`yuv420p`), áudio AAC estéreo (quando houver áudio) e metadados no
-início do arquivo (`faststart`). Aceita MP4, MOV, M4V, WebM, MKV, AVI, MTS e M2TS
-até 250 MB. A extensão sozinha não garante que o conteúdo seja decodificável.
+## Funcionalidades
 
-Instale com `npm install` e reinicie `npm run dev` após atualizar as dependências.
-O pacote `ffmpeg-static` baixa um executável para o sistema operacional atual.
-O processamento é local, pode levar minutos e tem limite de 10 minutos por vídeo;
-a página de envio deve permanecer aberta. O arquivo original no computador do
-editor não é alterado. O servidor guarda a versão convertida para reprodução.
-Arquivos enviados antes desta mudança devem ser reenviados como nova versão.
+- Login real do editor, sessão de 8 horas e saída da conta.
+- Cadastro, consulta, edição e exclusão de clientes sem projetos vinculados.
+- Criação, pesquisa, edição de nome/descrição/status e exclusão de projetos.
+- Upload, conversão, reprodução, histórico e exclusão de versões.
+- Link de revisão sem cadastro de cliente, com ativação/desativação.
+- Comentários por versão, minutagem opcional, captura do instante do player e retorno ao trecho.
+- Solicitações pendentes, em andamento ou resolvidas; histórico público por versão.
+- Progresso calculado pela proporção de solicitações resolvidas e métricas no dashboard.
 
-Não é uma garantia de suporte a todo codec: arquivos corrompidos, protegidos ou
-sem faixa de vídeo são rejeitados. A conversão para 8 bits é voltada a revisão;
-não substitui o master e não faz gerenciamento de cor/tone mapping de HDR.
-Hospedagem serverless com disco temporário/timeout curto exige armazenamento e
-fila de processamento externos. Nenhum serviço externo foi configurado aqui.
+A conclusão do projeto é uma decisão manual do editor. Marcar o projeto como
+Resolvido não altera automaticamente as solicitações, nem significa aprovação
+formal do cliente. Não há fluxo de aprovação eletrônica no escopo atual.
 
-`npm run test:video` verifica H.264, HEVC de 10 bits, WebM/VP9, ProRes sem áudio,
-arquivos inválidos e pedidos de trechos do vídeo. Com `VIDEO_TEST_BASE_URL`
-apontando para um servidor local de teste, também verifica upload, reprodução
-pública e desativação do link, criando e removendo seus próprios dados temporários.
+## Executar localmente
 
-## Getting Started
+Requer Node.js 20.9 ou superior compatível com as dependências nativas; validado
+neste computador com Node.js 24.21.0. O FFmpeg é baixado na instalação.
 
-First, run the development server:
+1. Execute `npm install`.
+2. Crie `.env` com `DATABASE_URL="file:./prisma/dev.db"`.
+3. Execute `npx prisma generate` e `npx prisma migrate deploy`.
+4. Execute `npm run auth:prepare`.
+5. Execute `npm run dev`.
+6. Abra o link local de configuração exibido pelo passo 4 e escolha nome, e-mail
+   e senha de pelo menos 12 caracteres. Esse código de configuração é secreto,
+   de uso inicial, e não deve ser compartilhado.
+7. Nos próximos acessos, entre por [localhost:3000](http://localhost:3000).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+A configuração associa o acesso ao editor local existente, preservando seu ID,
+clientes, projetos e vídeos. Não é necessário executar o seed. `npm run db:seed`
+é somente para demonstrações com dados fictícios, não para uma base de testes reais.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Autenticação e dados locais
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Esta edição do MVP atende **um editor por instalação**. As credenciais ficam em
+`.local/auth.json`, fora da pasta pública e ignoradas pelo Git: senha derivada com
+scrypt e salt aleatório, segredo de assinatura gerado localmente e ID do editor.
+Não existe senha padrão ou acesso anônimo ao painel. Não envie essa pasta ao GitHub.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+A sessão usa cookie HttpOnly, SameSite=Lax e prazo de 8 horas; em HTTPS, Secure.
+Há validação da assinatura e do editor nas APIs, proteção de navegação no Proxy,
+verificação de origem e limite simples de tentativas de login por processo.
+Sair remove o cookie do navegador; como as sessões são assinadas e sem tabela de
+sessões, uma cópia de um token continua válida até expirar. Rotacionar o segredo
+invalida todas as sessões. Recuperação de senha por e-mail e múltiplos editores
+não estão implementados.
 
-## Learn More
+Faça backup conjunto de `prisma/dev.db`, `public/uploads` e `.local`, com o
+servidor parado. O banco, os vídeos e os segredos não são versionados.
+Excluir projetos/versões remove os respectivos registros e arquivos, sem lixeira.
 
-To learn more about Next.js, take a look at the following resources:
+As URLs diretas de uploads exigem sessão do editor. O cliente recebe o vídeo
+pela API que verifica o token e se o link está ativo. Desativar um link impede
+novas consultas e envios; não apaga cópias já baixadas ou o vídeo já carregado
+no navegador do cliente. Todo comentário do projeto é compartilhado pelo link:
+não há notas privadas do editor.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Compatibilidade de vídeo
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Novos uploads são convertidos com FFmpeg para MP4/H.264 de 8 bits (`yuv420p`),
+áudio AAC estéreo quando presente e índice no início do arquivo (`faststart`).
+Aceita MP4, MOV, M4V, WebM, MKV, AVI, MTS e M2TS até 250 MB. A extensão não
+garante que o conteúdo seja decodificável. Arquivos inválidos são rejeitados.
 
-## Deploy on Vercel
+O processamento ocorre localmente, tem limite de 10 minutos por vídeo e requer
+manter a página aberta. O original no computador não é modificado.
+Não substitui o master, não faz tone mapping de HDR e não garante todos os codecs.
+Vídeos antigos que falhem podem ser reenviados como nova versão.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Se um vídeo funcionar no Chrome e falhar no Opera, teste ativar/desativar a
+aceleração gráfica nas configurações e reinicie o navegador. A aplicação não
+consegue alterar essa configuração. [Orientação oficial do Opera](https://help.opera.com/en/faq/).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Testes e conferência
+
+- `npm run lint`: análise estática.
+- `npx tsc --noEmit`: verificação de tipos.
+- `npm run build`: compilação de produção.
+- `npm test`: validações, sessões, minutagem, progresso e conversões.
+- `npm run test:mvp`: sobe servidor temporário na porta 3107 e usa SQLite e
+  credenciais exclusivos de teste. Verifica login, acesso negado, upload, revisão
+  pública, comentários, edição, progresso e desativação. Reserva um ID de projeto
+  sem pasta existente para os arquivos de teste; remove os próprios dados ao terminar.
+
+O teste de conversão inclui H.264, HEVC de 10 bits, WebM/VP9 e ProRes sem áudio.
+O vídeo propositalmente inválido gera um log de erro esperado.
+
+Roteiro manual: cadastre cliente e projeto; envie um vídeo; abra o link em janela
+anônima; marque um instante e envie comentário; no painel altere o status; no
+link clique em Atualizar status; clique na minutagem e confira o trecho; desative
+o link e confirme que novos acessos são negados.
+
+## Publicação e limites
+
+O MVP local está implementado, mas **não foi publicado na internet**. Links com
+localhost só funcionam no computador que executa o servidor. Nenhum serviço pago
+foi contratado e nenhuma conta externa foi criada.
+
+Para publicar: escolher hospedagem Node com HTTPS e disco persistente, configurar
+backups e uma origem confiável, revisar autenticação e limites de abuso para a
+internet e verificar licenças do FFmpeg/codecs na distribuição pretendida.
+Ambientes serverless de curta duração exigem armazenamento e fila de conversão
+externos; não basta enviar esta instalação para uma função serverless.
+
+Veja [CHANGELOG.md](CHANGELOG.md) para as entregas e limitações conhecidas.

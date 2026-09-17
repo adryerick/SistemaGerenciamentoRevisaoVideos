@@ -1,26 +1,25 @@
+import { withEditor } from "../../../../lib/auth";
 import { toChangeRequestDto } from "../../../../lib/presenters";
 import { prisma } from "../../../../lib/prisma";
+import { getDemoEditor } from "../../../../lib/demo-editor";
+import { validateReviewInput } from "../../../../lib/review-feedback";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: RouteContext<"/api/projetos/[id]/solicitacoes">,
 ) {
   const { id } = await params;
   const projectId = Number(id);
-  const body = await request.json();
-  const comment = typeof body.comment === "string" ? body.comment.trim() : "";
-  const timestamp = typeof body.timestamp === "string" ? body.timestamp.trim() : "";
-  const videoVersionId = Number(body.videoVersionId);
-
-  if (!comment || !Number.isInteger(videoVersionId)) {
-    return Response.json(
-      { error: "Comentário e versão do vídeo são obrigatórios." },
-      { status: 400 },
-    );
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+    return Response.json({ error: "Projeto inválido." }, { status: 400 });
   }
+  const input = validateReviewInput(await request.json().catch(() => null));
+  if ("error" in input) return Response.json(input, { status: 400 });
+  const { comment, timestamp, videoVersionId } = input;
+  const editor = await getDemoEditor();
 
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, editorId: editor.id },
     select: { id: true, clientId: true },
   });
   const videoVersion = await prisma.videoVersion.findFirst({
@@ -47,3 +46,5 @@ export async function POST(
 
   return Response.json(toChangeRequestDto(changeRequest), { status: 201 });
 }
+
+export const POST = withEditor(handlePOST);

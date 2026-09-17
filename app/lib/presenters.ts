@@ -22,6 +22,7 @@ type ProjectRecord = {
   progress: number;
   client: { name: string };
   _count?: { changeRequests: number };
+  changeRequests?: { status: string }[];
 };
 
 type VideoVersionRecord = {
@@ -61,7 +62,9 @@ export function toProjectDto(project: ProjectRecord): Project {
     version: project.currentVersion,
     status: project.status,
     requests: project._count?.changeRequests ?? 0,
-    progress: project.progress,
+    progress: project.changeRequests
+      ? (project.changeRequests.length ? Math.round(100 * project.changeRequests.filter((request) => request.status === "Resolvido").length / project.changeRequests.length) : 0)
+      : project.progress,
     description: project.description ?? "",
   };
 }

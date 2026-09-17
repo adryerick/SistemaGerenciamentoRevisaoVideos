@@ -1,10 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
+  const [error, setError] = useState("");
+  async function logout() {
+    setLeaving(true); setError("");
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("logout");
+      router.replace("/");
+      router.refresh();
+    } catch { setError("Não foi possível sair. Tente novamente."); setLeaving(false); }
+  }
   const navigationItems = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/projetos", label: "Projetos" },
@@ -12,7 +25,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 shrink-0 border-r border-[#29292d] bg-[#111113] p-5">
+    <aside className="flex w-40 shrink-0 flex-col border-r border-[#29292d] bg-[#111113] p-3 sm:w-64 sm:p-5">
 
       {/* Logo */}
       <div className="mb-10 flex items-center gap-3">
@@ -54,10 +67,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Usuário */}
-      <div className="absolute bottom-5 w-[214px] rounded-xl border border-[#29292d] bg-[#171719] p-3">
+      <div className="mt-auto rounded-xl border border-[#29292d] bg-[#171719] p-3">
         <p className="text-sm font-medium text-white">
-          Adryerick
+          Área do editor
         </p>
+        <button type="button" disabled={leaving} onClick={logout} className="mt-3 text-xs text-zinc-300 underline">{leaving ? "Saindo..." : "Sair da conta"}</button>
+        {error && <p role="alert" className="mt-2 text-xs text-red-300">{error}</p>}
 
         <p className="text-xs text-zinc-500">
           Editor de Vídeo

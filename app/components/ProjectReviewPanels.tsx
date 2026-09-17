@@ -1,7 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import VideoPlayer from "./VideoPlayer";
+import { formatTimestamp, parseTimestamp, validateReviewInput } from "../lib/review-feedback";
+import { seekToTimestamp } from "../lib/video-navigation";
 import { VIDEO_ACCEPT, validateVideoFile } from "../lib/video-formats";
 import type { ChangeRequest, VideoVersion } from "../types";
 
@@ -22,8 +25,14 @@ export default function ProjectReviewPanels({
   videoVersions,
   changeRequests,
 }: ProjectReviewPanelsProps) {
-  const [versions, setVersions] = useState(videoVersions);
-  const [requests, setRequests] = useState(changeRequests);
+  const router = useRouter();
+  const versions = videoVersions;
+  const requests = changeRequests;
+  const players = useRef(new Map<number, HTMLVideoElement>());
+  const commentInput = useRef<HTMLTextAreaElement>(null);
+  const [requestError, setRequestError] = useState("");
+  const [requestBusy, setRequestBusy] = useState(false);
+  const [requestFilter, setRequestFilter] = useState("Todas");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -31,6 +40,7 @@ export default function ProjectReviewPanels({
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [videoVersionId, setVideoVersionId] = useState(videoVersions[0]?.id ?? 0);
+  const visibleRequests = requests.filter((request) => requestFilter === "Todas" || request.status === requestFilter);
 
   async function handleCreateVersion() {
     if (!videoFile) {
@@ -59,7 +69,7 @@ export default function ProjectReviewPanels({
         return;
       }
 
-      setVersions((currentVersions) => [result, ...currentVersions]);
+      router.refresh();
       setVideoVersionId(result.id);
       setVideoFile(null);
       if (videoInput.current) videoInput.current.value = "";
@@ -94,15 +104,7 @@ export default function ProjectReviewPanels({
           return;
         }
 
-        setVersions((currentVersions) =>
-          currentVersions.filter((version) => version.id !== versionId),
-        );
-
-        setRequests((currentRequests) =>
-          currentRequests.filter(
-            (request) => request.videoVersionId !== versionId,
-          ),
-        );
+        router.refresh();
 
         if (videoVersionId === versionId) {
           const remainingVersion = versions.find(
@@ -120,6 +122,10 @@ export default function ProjectReviewPanels({
     requestId: number,
     status: ChangeRequest["status"],
   ) {
+    if (requestBusy) return;
+    setRequestBusy(true);
+    setRequestError("");
+    try {
     const response = await fetch(`/api/solicitacoes/${requestId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -127,59 +133,66 @@ export default function ProjectReviewPanels({
     });
 
     if (!response.ok) {
-      alert("Não foi possível atualizar o status.");
+      setRequestError("Não foi possível atualizar o status.");
       return;
     }
 
-    const updatedRequest = await response.json();
-    setRequests((currentRequests) =>
-      currentRequests.map((request) =>
-        request.id === requestId ? updatedRequest : request,
-      ),
-    );
+    router.refresh();
+    } catch {
+      setRequestError("Falha de conexão ao atualizar o status. Tente novamente.");
+    } finally { setRequestBusy(false); }
   }
 
   async function handleDeleteRequest(requestId: number) {
+    if (requestBusy) return;
     if (!window.confirm("Excluir esta solicitação de alteração?")) {
       return;
     }
 
+    setRequestBusy(true);
+    setRequestError("");
+    try {
     const response = await fetch(`/api/solicitacoes/${requestId}`, {
       method: "DELETE",
     });
     const result = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      alert(result.error ?? "Não foi possível excluir a solicitação.");
+      setRequestError(result.error ?? "Não foi possível excluir a solicitação.");
       return;
     }
 
-    setRequests((currentRequests) =>
-      currentRequests.filter((request) => request.id !== requestId),
-    );
+    router.refresh();
+    } catch {
+      setRequestError("Falha de conexão ao excluir. Tente novamente.");
+    } finally { setRequestBusy(false); }
   }
 
   async function handleCreateRequest() {
-    if (!comment.trim() || !videoVersionId) {
-      alert("Informe o comentário e selecione uma versão.");
-      return;
-    }
-
+    if (requestBusy) return;
+    const input = validateReviewInput({ comment, timestamp, videoVersionId });
+    if ("error" in input) { setRequestError(input.error); return; }
+    setRequestBusy(true);
+    setRequestError("");
+    try {
     const response = await fetch(`/api/projetos/${projectId}/solicitacoes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comment, timestamp, videoVersionId }),
+      body: JSON.stringify(input),
     });
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      alert(result.error ?? "Não foi possível registrar a solicitação.");
+      setRequestError(result.error ?? "Não foi possível registrar a solicitação.");
       return;
     }
 
-    setRequests((currentRequests) => [result, ...currentRequests]);
+    router.refresh();
     setComment("");
     setTimestamp("");
+    } catch {
+      setRequestError("Falha de conexão. Seu comentário foi mantido; tente novamente.");
+    } finally { setRequestBusy(false); }
   }
 
   return (
@@ -252,7 +265,17 @@ export default function ProjectReviewPanels({
             </div>
               <p className="mt-3 text-sm text-zinc-300">{videoVersion.fileName}</p>
               {videoVersion.videoUrl ? (
-                <VideoPlayer key={videoVersion.videoUrl} src={videoVersion.videoUrl} />
+                <VideoPlayer key={videoVersion.videoUrl} src={videoVersion.videoUrl}
+                  videoRef={(element) => {
+                    if (element) players.current.set(videoVersion.id, element);
+                    else players.current.delete(videoVersion.id);
+                  }}
+                  onMarkTime={requestBusy ? undefined : (seconds) => {
+                    setVideoVersionId(videoVersion.id);
+                    setTimestamp(formatTimestamp(seconds));
+                    commentInput.current?.focus();
+                    commentInput.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }} />
               ) : (
                 <p className="mt-2 text-xs text-zinc-600">Arquivo de vídeo ainda não enviado.</p>
               )}
@@ -273,6 +296,14 @@ export default function ProjectReviewPanels({
           <span className="text-sm text-zinc-500">{requests.length}</span>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <select aria-label="Filtrar solicitações por status" value={requestFilter}
+            onChange={(event) => setRequestFilter(event.target.value)} className="rounded-lg border border-[#303035] bg-[#111113] p-2 text-sm">
+            {["Todas", ...requestStatuses].map((status) => <option key={status}>{status}</option>)}
+          </select>
+          <button type="button" disabled={requestBusy} onClick={() => router.refresh()} className="text-sm text-zinc-300 underline">Atualizar solicitações</button>
+        </div>
+        {requestError && <p role="alert" className="mt-3 text-sm text-red-300">{requestError}</p>}
         <div className="mt-5 space-y-3">
           {versions.length > 0 && (
             <div className="rounded-lg border border-[#29292d] bg-[#111113] p-4">
@@ -280,8 +311,10 @@ export default function ProjectReviewPanels({
 
               <div className="mt-3 space-y-3">
                 <select
+                  disabled={requestBusy}
+                  aria-label="Versão da nova solicitação"
                   value={videoVersionId}
-                  onChange={(event) => setVideoVersionId(Number(event.target.value))}
+                  onChange={(event) => { setVideoVersionId(Number(event.target.value)); setTimestamp(""); }}
                   className="w-full rounded-lg border border-[#303035] bg-[#151517] px-3 py-2 text-sm text-zinc-300 outline-none"
                 >
                   {versions.map((videoVersion) => (
@@ -292,6 +325,9 @@ export default function ProjectReviewPanels({
                 </select>
 
                 <input
+                  disabled={requestBusy}
+                  aria-label="Minutagem da solicitação"
+                  maxLength={8}
                   value={timestamp}
                   onChange={(event) => setTimestamp(event.target.value)}
                   placeholder="Minutagem opcional, ex.: 00:23"
@@ -299,6 +335,10 @@ export default function ProjectReviewPanels({
                 />
 
                 <textarea
+                  ref={commentInput}
+                  disabled={requestBusy}
+                  aria-label="Comentário da solicitação"
+                  maxLength={2000}
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   placeholder="Descreva a alteração solicitada..."
@@ -307,27 +347,30 @@ export default function ProjectReviewPanels({
                 />
 
                 <button
+                  disabled={requestBusy}
                   onClick={handleCreateRequest}
                   className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
                 >
-                  Registrar solicitação
+                  {requestBusy ? "Salvando..." : "Registrar solicitação"}
                 </button>
               </div>
             </div>
           )}
 
-          {requests.length > 0 ? (
-            requests.map((request) => (
+          {visibleRequests.length > 0 ? (
+            visibleRequests.map((request) => (
               <div
                 key={request.id}
                 className="rounded-lg border border-[#29292d] bg-[#111113] p-4"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-zinc-500">
-                    {request.timestamp || "Sem minutagem"}
-                  </span>
+                  {request.timestamp && parseTimestamp(request.timestamp) !== null && versions.some((version) => version.id === request.videoVersionId && version.videoUrl)
+                    ? <button type="button" onClick={() => seekToTimestamp(players.current.get(request.videoVersionId), request.timestamp!)}
+                        className="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200" aria-label={`Ir para ${request.timestamp} no vídeo`}>▶ {request.timestamp}</button>
+                    : <span className="text-xs text-zinc-500">{request.timestamp || "Sem minutagem"}</span>}
                   <div className="flex items-center gap-2">
                     <select
+                      disabled={requestBusy}
                       value={request.status}
                       onChange={(event) =>
                         handleStatusChange(
@@ -345,6 +388,7 @@ export default function ProjectReviewPanels({
                       ))}
                     </select>
                     <button
+                      disabled={requestBusy}
                       type="button"
                       onClick={() => void handleDeleteRequest(request.id)}
                       className="rounded-md border border-red-900/40 px-2 py-1 text-xs text-red-400 transition hover:border-red-800 hover:bg-red-950/30 hover:text-red-300"
@@ -353,15 +397,15 @@ export default function ProjectReviewPanels({
                     </button>
                   </div>
                 </div>
-                <p className="mt-3 text-sm text-zinc-300">{request.comment}</p>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm text-zinc-300">{request.comment}</p>
                 <p className="mt-2 text-xs text-zinc-600">
-                  Registrada em {request.createdAt}
+                  V{String(versions.find((version) => version.id === request.videoVersionId)?.number ?? "?").padStart(2, "0")} · Registrada em {request.createdAt}
                 </p>
               </div>
             ))
           ) : (
             <p className="rounded-lg border border-dashed border-[#29292d] px-4 py-6 text-sm text-zinc-500">
-              Nenhuma solicitação registrada para este projeto.
+              Nenhuma solicitação encontrada neste filtro.
             </p>
           )}
         </div>

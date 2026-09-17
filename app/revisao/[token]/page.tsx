@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import PublicReviewForm from "../../components/PublicReviewForm";
-import VideoPlayer from "../../components/VideoPlayer";
-import { toVideoVersionDto } from "../../lib/presenters";
+import { toChangeRequestDto, toVideoVersionDto } from "../../lib/presenters";
 import { prisma } from "../../lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +15,7 @@ export default async function PublicReviewPage({
       name: true,
       description: true,
       videoVersions: { orderBy: { number: "desc" } },
+      changeRequests: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -36,32 +36,9 @@ export default async function PublicReviewPage({
           </p>
         )}
 
-        <section className="mt-8 rounded-xl border border-[#29292d] bg-[#151517] p-5">
-          <h2 className="text-lg font-semibold">Versões disponíveis</h2>
-          <div className="mt-4 space-y-3">
-            {videoVersions.map((videoVersion) => (
-              <div key={videoVersion.id} className="rounded-lg border border-[#29292d] bg-[#111113] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{videoVersion.fileName}</p>
-                    <p className="mt-1 text-xs text-zinc-500">Enviada em {videoVersion.sentAt}</p>
-                  </div>
-                  <span className="rounded-full bg-[#222225] px-2.5 py-1 text-xs text-zinc-300">
-                    V{videoVersion.number.toString().padStart(2, "0")}
-                  </span>
-                </div>
-                {videoVersion.videoUrl && (
-                  <VideoPlayer
-                    src={`/api/revisao/${token}/videos/${videoVersion.id}`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <div className="mt-6">
-          <PublicReviewForm reviewToken={token} videoVersions={videoVersions} />
+        <div className="mt-8">
+          <PublicReviewForm reviewToken={token} videoVersions={videoVersions}
+            changeRequests={project.changeRequests.map(toChangeRequestDto)} />
         </div>
       </div>
     </main>

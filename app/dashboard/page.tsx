@@ -16,6 +16,7 @@ export default async function Dashboard() {
         include: {
           client: { select: { name: true } },
           _count: { select: { changeRequests: true } },
+          changeRequests: { select: { status: true } },
         },
         orderBy: { createdAt: "desc" },
       }),

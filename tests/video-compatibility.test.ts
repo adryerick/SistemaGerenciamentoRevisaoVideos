@@ -11,6 +11,11 @@ import { parseVideoRange } from "../app/lib/video-range";
 import { MAX_VIDEO_SIZE, validateVideoFile } from "../app/lib/video-formats";
 
 const run = promisify(execFile);
+const editorFetch: typeof fetch = (input, init) => {
+  const headers = new Headers(init?.headers);
+  if (process.env.VIDEO_TEST_COOKIE) headers.set("Cookie", process.env.VIDEO_TEST_COOKIE);
+  return fetch(input, { ...init, headers });
+};
 
 test("MP4 byte ranges support seeking and suffix requests", () => {
   assert.deepEqual(parseVideoRange("bytes=-10", 100), { start: 90, end: 99, partial: true });
@@ -70,26 +75,27 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
         let clientId: number | undefined;
         let projectId: number | undefined;
         try {
-          const clientResponse = await fetch(`${base}/api/clients`, {
+          const clientResponse = await editorFetch(`${base}/api/clients`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: `VideoTest-${Date.now()}`, email: `video-${Date.now()}@example.test` }),
           });
           assert.equal(clientResponse.status, 201);
           const client = await clientResponse.json();
           clientId = client.id;
-          const projectResponse = await fetch(`${base}/api/projetos`, {
+          const projectResponse = await editorFetch(`${base}/api/projetos`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: "Temporary compatibility test", client: client.name }),
           });
           assert.equal(projectResponse.status, 201);
           const project = await projectResponse.json();
+          if (process.env.VIDEO_TEST_PROJECT_ID) assert.equal(project.id, Number(process.env.VIDEO_TEST_PROJECT_ID), "Refuse uploads/deletions outside reserved test project");
           projectId = project.id;
           const form = new FormData();
           form.append("video", new Blob([await readFile(path.join(directory, "hevc10.mp4"))], { type: "video/mp4" }), "CapCut-test.mp4");
-          const uploaded = await fetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: form });
+          const uploaded = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: form });
           const uploadedBody = await uploaded.json();
           assert.equal(uploaded.status, 201, JSON.stringify(uploadedBody));
-          const direct = await fetch(`${base}${uploadedBody.videoUrl}`);
+          const direct = await editorFetch(`${base}${uploadedBody.videoUrl}`);
           assert.equal(direct.status, 200);
           const uploadedBytes = Buffer.from(await direct.arrayBuffer());
           const uploadedPath = path.join(directory, "uploaded.mp4");
@@ -97,7 +103,7 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           const inspected = await run(ffmpegPath!, ["-hide_banner", "-i", uploadedPath, "-f", "null", "-"], { windowsHide: true });
           assert.match(inspected.stderr, /Video: h264/);
 
-          const details = await (await fetch(`${base}/projetos/${projectId}`)).text();
+          const details = await (await editorFetch(`${base}/projetos/${projectId}`)).text();
           const reviewPath = details.match(/\/revisao\/[a-z0-9]+/)?.[0];
           assert.ok(reviewPath && !reviewPath.endsWith("undefined"));
           assert.equal((await fetch(`${base}${reviewPath}`)).status, 200);
@@ -110,19 +116,43 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           assert.deepEqual(Buffer.from(await suffix.arrayBuffer()), uploadedBytes.subarray(-10));
           assert.equal((await fetch(publicVideo, { headers: { Range: `bytes=${uploadedBytes.length}-` } })).status, 416);
 
+          const feedbackUrl = `${base}/api${reviewPath}/solicitacoes`;
+          const jsonHeaders = { "Content-Type": "application/json" };
+          assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: "not-json" })).status, 400);
+          assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Teste", videoVersionId: uploadedBody.id, timestamp: "00:99" }) })).status, 400);
+          assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Teste", videoVersionId: 2147483647 }) })).status, 404);
+          const feedback = await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Ajuste de cor do teste automatizado", videoVersionId: uploadedBody.id, timestamp: "0:00" }) });
+          assert.equal(feedback.status, 201);
+          const feedbackBody = await feedback.json();
+          assert.equal(feedbackBody.timestamp, "00:00");
+          assert.match(await (await fetch(`${base}${reviewPath}`)).text(), /Ajuste de cor do teste automatizado/);
+          const resolved = await editorFetch(`${base}/api/solicitacoes/${feedbackBody.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ status: "Resolvido" }) });
+          assert.equal(resolved.status, 200);
+          assert.match(await (await fetch(`${base}${reviewPath}`)).text(), /Resolvido/);
+          const edited = await editorFetch(`${base}/api/projetos/${projectId}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ name: "Projeto revisado", description: "Descrição atualizada", status: "Resolvido" }) });
+          assert.equal(edited.status, 200);
+          const projects = await (await editorFetch(`${base}/api/projetos`)).json();
+          const updatedProject = projects.find((item: { id: number }) => item.id === projectId);
+          assert.equal(updatedProject.name, "Projeto revisado");
+          assert.equal(updatedProject.progress, 100);
+          assert.equal((await editorFetch(`${base}/projetos/invalid`)).status, 404);
+          assert.equal((await editorFetch(`${base}/projetos/2147483647`)).status, 404);
+
           const corrupt = new FormData();
           corrupt.append("video", new Blob(["invalid"]), "broken.mp4");
-          const rejected = await fetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: corrupt });
+          const rejected = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: corrupt });
           assert.equal(rejected.status, 422);
           assert.match((await rejected.json()).error, /decodificar/);
-          const disabled = await fetch(`${base}/api/projetos/${projectId}`, {
+          const disabled = await editorFetch(`${base}/api/projetos/${projectId}`, {
             method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewEnabled: false }),
           });
           assert.equal(disabled.status, 200);
           assert.equal((await fetch(publicVideo)).status, 404);
+          assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Não deve aceitar", videoVersionId: uploadedBody.id }) })).status, 404);
+          assert.equal((await fetch(`${base}${uploadedBody.videoUrl}`)).status, 401);
         } finally {
-          if (projectId) assert.equal((await fetch(`${base}/api/projetos/${projectId}`, { method: "DELETE" })).status, 200);
-          if (clientId) assert.equal((await fetch(`${base}/api/clients/${clientId}`, { method: "DELETE" })).status, 200);
+          if (projectId) assert.equal((await editorFetch(`${base}/api/projetos/${projectId}`, { method: "DELETE" })).status, 200);
+          if (clientId) assert.equal((await editorFetch(`${base}/api/clients/${clientId}`, { method: "DELETE" })).status, 200);
         }
       });
     }

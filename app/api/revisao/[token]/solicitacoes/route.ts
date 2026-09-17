@@ -1,22 +1,15 @@
 import { toChangeRequestDto } from "../../../../lib/presenters";
 import { prisma } from "../../../../lib/prisma";
+import { validateReviewInput } from "../../../../lib/review-feedback";
 
 export async function POST(
   request: Request,
   { params }: RouteContext<"/api/revisao/[token]/solicitacoes">,
 ) {
   const { token } = await params;
-  const body = await request.json();
-  const comment = typeof body.comment === "string" ? body.comment.trim() : "";
-  const timestamp = typeof body.timestamp === "string" ? body.timestamp.trim() : "";
-  const videoVersionId = Number(body.videoVersionId);
-
-  if (!comment || comment.length > 2000 || !Number.isInteger(videoVersionId)) {
-    return Response.json(
-      { error: "Comentário e versão do vídeo são obrigatórios." },
-      { status: 400 },
-    );
-  }
+  const input = validateReviewInput(await request.json().catch(() => null));
+  if ("error" in input) return Response.json(input, { status: 400 });
+  const { comment, timestamp, videoVersionId } = input;
 
   const project = await prisma.project.findFirst({
     where: { reviewToken: token, reviewEnabled: true },

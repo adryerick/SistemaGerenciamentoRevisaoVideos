@@ -1,8 +1,9 @@
+import { withEditor } from "../../lib/auth";
 import { getDemoEditor } from "../../lib/demo-editor";
 import { toClientDto } from "../../lib/presenters";
 import { prisma } from "../../lib/prisma";
 
-export async function GET() {
+async function handleGET() {
   const editor = await getDemoEditor();
   const clients = await prisma.client.findMany({
     where: { editorId: editor.id },
@@ -13,7 +14,7 @@ export async function GET() {
   return Response.json(clients.map(toClientDto));
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json();
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -42,3 +43,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "Não foi possível criar o cliente." }, { status: 500 });
   }
 }
+
+export const GET = withEditor(handleGET);
+export const POST = withEditor(handlePOST);

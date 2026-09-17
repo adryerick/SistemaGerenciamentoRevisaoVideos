@@ -1,3 +1,4 @@
+import { withEditor } from "../../../lib/auth";
 import { getDemoEditor } from "../../../lib/demo-editor";
 import { toClientDto } from "../../../lib/presenters";
 import { prisma } from "../../../lib/prisma";
@@ -10,7 +11,7 @@ function readClientData(body: unknown) {
   };
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -47,7 +48,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -78,3 +79,6 @@ export async function DELETE(
   await prisma.client.delete({ where: { id: client.id } });
   return Response.json({ success: true });
 }
+
+export const PATCH = withEditor(handlePATCH);
+export const DELETE = withEditor(handleDELETE);

@@ -1,3 +1,5 @@
+import { withEditor } from "../../../../lib/auth";
+import { getDemoEditor } from "../../../../lib/demo-editor";
 import { randomUUID } from "node:crypto";
 import { copyFile, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,12 +11,13 @@ import { validateVideoFile } from "../../../../lib/video-formats";
 
 export const runtime = "nodejs";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: RouteContext<"/api/projetos/[id]/versoes">,
 ) {
   const { id } = await params;
   const projectId = Number(id);
+  const editor = await getDemoEditor();
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -41,7 +44,7 @@ export async function POST(
   let temporaryDirectory: string | undefined;
   let publishedFile = false;
   try {
-    const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
+    const project = await prisma.project.findFirst({ where: { id: projectId, editorId: editor.id }, select: { id: true } });
     if (!project) return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
 
     temporaryDirectory = await mkdtemp(path.join(tmpdir(), "videoreview-convert-"));
@@ -95,12 +98,13 @@ export async function POST(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   request: Request,
   { params }: RouteContext<"/api/projetos/[id]/versoes">,
 ) {
   const { id } = await params;
   const projectId = Number(id);
+  const editor = await getDemoEditor();
 
   if (!Number.isInteger(projectId)) {
     return Response.json({ error: "Projeto inválido." }, { status: 400 });
@@ -117,6 +121,7 @@ export async function DELETE(
     where: {
       id: versionId,
       projectId,
+      project: { editorId: editor.id },
     },
   });
 
@@ -138,7 +143,7 @@ export async function DELETE(
     },
   });
 
- if (filePath) {
+ if (filePath && path.resolve(filePath).startsWith(`${path.resolve(process.cwd(), "public", "uploads", "projects", String(projectId))}${path.sep}`)) {
   await rm(filePath, { force: true });
 }
 
@@ -159,9 +164,12 @@ export async function DELETE(
       currentVersion: latestVersion
     ? latestVersion.number.toString().padStart(2, "0")
     : "",
-      status: latestVersion ? "Em revisão" : "Aguardando vídeo",
+      status: latestVersion ? "Em revisão" : "Pendente",
     },
   });
 
   return Response.json({ success: true });
 }
+
+export const POST = withEditor(handlePOST);
+export const DELETE = withEditor(handleDELETE);

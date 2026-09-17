@@ -1,14 +1,16 @@
+import { withEditor } from "../../lib/auth";
 import { getDemoEditor } from "../../lib/demo-editor";
 import { toProjectDto } from "../../lib/presenters";
 import { prisma } from "../../lib/prisma";
 
-export async function GET() {
+async function handleGET() {
   const editor = await getDemoEditor();
   const projects = await prisma.project.findMany({
     where: { editorId: editor.id },
     include: {
       client: { select: { name: true } },
       _count: { select: { changeRequests: true } },
+      changeRequests: { select: { status: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -16,7 +18,7 @@ export async function GET() {
   return Response.json(projects.map(toProjectDto));
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json();
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const clientName = typeof body.client === "string" ? body.client.trim() : "";
@@ -54,3 +56,6 @@ export async function POST(request: Request) {
 
   return Response.json(toProjectDto(project), { status: 201 });
 }
+
+export const GET = withEditor(handleGET);
+export const POST = withEditor(handlePOST);
