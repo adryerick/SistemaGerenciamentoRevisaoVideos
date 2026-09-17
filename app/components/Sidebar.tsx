@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import ReviewUpdates from "./ReviewUpdates";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -67,6 +68,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Usuário */}
+      <div className="mt-6"><ReviewUpdates editor /></div>
       <div className="mt-auto rounded-xl border border-[#29292d] bg-[#171719] p-3">
         <p className="text-sm font-medium text-white">
           Área do editor

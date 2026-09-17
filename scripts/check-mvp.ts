@@ -32,7 +32,7 @@ async function main() {
   const port = 3107;
   // A separate hostname keeps browser test cookies apart from localhost:3000.
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, APP_URL: base, DATABASE_URL: `file:${databaseFile}`, VIDEOREVIEW_AUTH_DIR: authDir, NEXT_DIST_DIR: ".next-test", NEXT_TELEMETRY_DISABLED: "1" };
+  const env = { ...process.env, APP_URL: base, DATABASE_URL: `file:${databaseFile}`, VIDEOREVIEW_AUTH_DIR: authDir, VIDEOREVIEW_DATA_DIR: path.join(temporary, "data"), VIDEOREVIEW_BACKUP_DISABLED: "1", NEXT_DIST_DIR: ".next-test", NEXT_TELEMETRY_DISABLED: "1" };
   const production = process.argv.includes("--production");
   if (production) {
     const build = spawn(process.execPath, ["node_modules/next/dist/bin/next", "build"], { cwd: root, env, windowsHide: true, stdio: "inherit" });
@@ -48,6 +48,9 @@ async function main() {
   server.stdout.on("data", (data) => { logs = (logs + data).slice(-16000); });
   server.stderr.on("data", (data) => { logs = (logs + data).slice(-16000); });
   let reviewFixture: { id: number; cookie: string } | undefined;
+  const worker = spawn(process.execPath, ["--import", "tsx", "scripts/video-worker.ts"], { cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  worker.stdout.on("data", (data) => { logs = (logs + data).slice(-16000); });
+  worker.stderr.on("data", (data) => { logs = (logs + data).slice(-16000); });
   try {
     let ready = false;
     for (let attempt = 0; attempt < 90; attempt++) {
@@ -64,6 +67,12 @@ async function main() {
     const cookie = login.headers.get("set-cookie")?.split(";")[0];
     assert.ok(cookie);
     assert.match(login.headers.get("set-cookie")!, /HttpOnly/i);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const activity = await (await fetch(`${base}/api/atividade`, { headers: { Cookie: cookie } })).json();
+      if (activity.online) break;
+      assert.ok(attempt < 29, `Test worker did not start: ${logs}`);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     if (process.argv.includes("--check-review")) {
       assert.ok(process.stdin.isTTY && ffmpegPath, "Use --check-review em um terminal interativo com FFmpeg instalado.");
       const headers = { Cookie: cookie, "Content-Type": "application/json" };
@@ -109,7 +118,7 @@ async function main() {
       return;
     }
     const testFiles = (await readdir(path.join(root, "tests"))).filter((file) => file.endsWith(".test.ts")).map((file) => `tests/${file}`);
-    const testProcess = spawn(process.execPath, ["--import", "tsx", "--test", ...testFiles], { cwd: root, env: { ...env, VIDEO_TEST_BASE_URL: base, VIDEO_TEST_COOKIE: cookie, VIDEO_TEST_PROJECT_ID: String(testProjectId) }, windowsHide: true, stdio: "inherit" });
+    const testProcess = spawn(process.execPath, ["--import", "tsx", "--test", ...testFiles], { cwd: root, env: { ...env, VIDEO_TEST_BASE_URL: base, VIDEO_TEST_COOKIE: cookie, VIDEO_TEST_PROJECT_ID: String(testProjectId), VIDEO_TEST_WORKER_PID: String(worker.pid) }, windowsHide: true, stdio: "inherit" });
     const exitCode = await new Promise<number>((resolve, reject) => { testProcess.on("error", reject); testProcess.on("exit", (code) => resolve(code ?? 1)); });
     if (exitCode) { console.error(logs); process.exitCode = exitCode; }
     else {
@@ -143,6 +152,12 @@ async function main() {
       console.log("✔ Recuperação local: troca de acesso, uso único, sessões antigas invalidadas e ID preservado.");
     }
   } finally {
+    if (worker.exitCode === null) {
+      if (process.platform === "win32" && worker.pid) {
+        const stopWorker = spawn("taskkill", ["/PID", String(worker.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
+        await new Promise((resolve) => stopWorker.once("exit", resolve));
+      } else worker.kill();
+    }
     if (reviewFixture) {
       assert.equal(reviewFixture.id, testProjectId);
       assert.equal((await fetch(`${base}/api/projetos/${reviewFixture.id}`, { method: "DELETE", headers: { Cookie: reviewFixture.cookie } })).status, 200);

@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { getDemoEditor } from "../../../lib/demo-editor";
 import { prisma } from "../../../lib/prisma";
+import { removeJobFiles } from "../../../lib/video-jobs";
 
 export const runtime = "nodejs";
 
@@ -75,7 +76,9 @@ async function handleDELETE(
     return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
   }
 
+  const jobs = await prisma.videoJob.findMany({ where: { projectId: project.id }, select: { id: true } });
   await prisma.project.delete({ where: { id: project.id } });
+  await Promise.all(jobs.map((job) => removeJobFiles(job.id).catch(console.error)));
 
   const uploadsRoot = path.resolve(process.cwd(), "public", "uploads", "projects");
   const projectUploads = path.resolve(uploadsRoot, String(project.id));

@@ -15,6 +15,11 @@ um editor e seus clientes. Next.js 16, React 19, TypeScript, Tailwind, Prisma e 
 - Conversas por solicitação, com respostas identificadas como editor ou cliente.
 - Aprovação da última versão pelo cliente, bloqueada enquanto houver ajustes em aberto nessa versão.
 - Marcações clicáveis dos comentários na linha do tempo; nome opcional de quem revisa.
+- Comparação lado a lado e troca de versão preservando o instante (limitado à duração de cada vídeo).
+- Checklist de ajustes, prioridades alta/normal/baixa e filtros para organizar o trabalho.
+- Alertas dentro da aplicação sobre novas versões, respostas e mudanças de status.
+- Fila persistente de conversão em segundo plano, retomada após interrupção e nova tentativa de falhas.
+- Backups locais completos, manuais ou diários enquanto o processador estiver ativo.
 - Progresso de upload separado da conversão, confirmação de envio e preservação do arquivo em falhas.
 - Revisão responsiva com filtros de status e rascunhos locais separados por versão.
 - Progresso calculado pela proporção de solicitações resolvidas e métricas no dashboard.
@@ -41,6 +46,10 @@ neste computador com Node.js 24.21.0. O FFmpeg é baixado na instalação.
    de uso inicial, e não deve ser compartilhado.
 7. Nos próximos acessos, entre por [localhost:3000](http://localhost:3000).
 
+Em outro terminal da mesma pasta, execute `npm run worker` para os envios em
+segundo plano e backups automáticos. `npm run share` e a inicialização do
+contêiner já iniciam o worker. Só um worker pode operar cada banco por vez.
+
 A configuração associa o acesso ao editor local existente, preservando seu ID,
 clientes, projetos e vídeos. Não é necessário executar o seed. `npm run db:seed`
 é somente para demonstrações com dados fictícios, não para uma base de testes reais.
@@ -60,8 +69,19 @@ sessões, uma cópia de um token continua válida até expirar. Rotacionar o seg
 invalida todas as sessões. Recuperação de senha por e-mail e múltiplos editores
 não estão implementados.
 
-Faça backup conjunto de `prisma/dev.db`, `public/uploads` e `.local`, com o
-servidor parado. O banco, os vídeos e os segredos não são versionados.
+Execute `npm run backup` para copiar banco, vídeos referenciados, arquivos de
+autenticação e originais da fila para `.local/backups`. O worker tenta uma cópia
+completa a cada 24 horas enquanto estiver ativo; falhas são mostradas no painel.
+`VIDEOREVIEW_DATA_DIR` configura o diretório privado de fila e backups (no
+contêiner, `/var/data`). A cópia usa o backup do SQLite, inclusive escritas em WAL.
+Não exclua vídeos ou altere o acesso durante uma cópia. Se algum arquivo faltar,
+o manifesto fica incompleto e a cópia não é anunciada como válida. Para migrar ou
+restaurar, pare os processos e utilize somente cópias com `manifest.json` completo.
+Restaure `dev.db`, `uploads`, os arquivos de `auth` e `video-queue` aos respectivos
+diretórios configurados; execute as migrations antes de reiniciar o worker.
+As cópias contêm segredos: nunca publique os backups. Elas ficam no mesmo PC,
+não protegem contra perda do disco e não são apagadas automaticamente. Acompanhe
+o espaço e mantenha uma cópia privada externa. Banco, vídeos e segredos não são versionados.
 Excluir projetos/versões remove os respectivos registros e arquivos, sem lixeira.
 
 ### Esqueci meu acesso
@@ -87,8 +107,15 @@ Novos uploads são convertidos com FFmpeg para MP4/H.264 de 8 bits (`yuv420p`),
 Aceita MP4, MOV, M4V, WebM, MKV, AVI, MTS e M2TS até 250 MB. A extensão não
 garante que o conteúdo seja decodificável. Arquivos inválidos são rejeitados.
 
-O processamento ocorre localmente, tem limite de 10 minutos por vídeo e requer
-manter a página aberta. O original no computador não é modificado.
+O processamento ocorre localmente e tem limite de 10 minutos por vídeo. Mantenha
+a página aberta durante a transmissão, até a confirmação de recebimento. Depois
+dessa confirmação, a conversão continua em segundo plano, mesmo saindo da página.
+Há uma conversão por vez e até três envios ativos na fila. O preparo aparece no
+projeto e a versão só é publicada após sucesso. Falhas podem ser repetidas até
+três tentativas ou descartadas pelo editor. Reiniciar o worker retoma preparos
+interrompidos; o computador e os processos precisam permanecer ativos.
+O original no computador não é modificado. A API mantém envio síncrono para
+integrações antigas; o formulário solicita `Prefer: respond-async`.
 Não substitui o master, não faz tone mapping de HDR e não garante todos os codecs.
 Vídeos antigos que falhem podem ser reenviados como nova versão.
 
@@ -104,6 +131,12 @@ e são removidos após um envio confirmado. Trocar a versão não transfere o te
 para outro vídeo. Se o armazenamento estiver bloqueado, o rascunho é mantido
 somente enquanto a página estiver aberta. Em computador compartilhado, considere
 usar janela privada; comentários enviados são visíveis a quem possui o link.
+
+Os alertas consultam atualizações a cada 15 segundos com a página visível, sem
+pedir permissões de notificações ou enviar e-mails. Clique em Ver atualizações
+para carregar novidades; seus rascunhos são preservados. Preparos são consultados
+a cada cinco segundos. Na comparação, sincronize com o player da esquerda;
+a reprodução é independente e não há alinhamento automático de cenas.
 
 Se um vídeo funcionar no Chrome e falhar no Opera, teste ativar/desativar a
 aceleração gráfica nas configurações e reinicie o navegador. A aplicação não

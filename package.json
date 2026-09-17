@@ -8,6 +8,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "start": "next start",
     "share": "node scripts/share-mvp.mjs",
+    "worker": "tsx scripts/video-worker.ts",
+    "backup": "tsx scripts/backup-data.ts",
     "lint": "eslint",
     "auth:prepare": "tsx scripts/prepare-auth.ts",
     "auth:recover": "tsx scripts/prepare-recovery.ts",

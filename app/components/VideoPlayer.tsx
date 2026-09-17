@@ -4,15 +4,17 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { hasVideoMetadata, markVideoTime, seekToTimestamp, subscribeVideoReadiness } from "../lib/video-navigation";
 import { timelineMarkers } from "../lib/review-collaboration";
 import type { ChangeRequest } from "../types";
+import { seekComparison } from "../lib/version-comparison";
 
 type VideoPlayerProps = {
   src: string;
   videoRef?: (element: HTMLVideoElement | null) => void;
   onMarkTime?: (seconds: number) => void;
   requests?: ChangeRequest[];
+  initialTime?: number;
 };
 
-export default function VideoPlayer({ src, videoRef, onMarkTime, requests = [] }: VideoPlayerProps) {
+export default function VideoPlayer({ src, videoRef, onMarkTime, requests = [], initialTime = 0 }: VideoPlayerProps) {
   const [error, setError] = useState("");
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const ready = useSyncExternalStore(
@@ -28,6 +30,9 @@ export default function VideoPlayer({ src, videoRef, onMarkTime, requests = [] }
   );
   const markers = timelineMarkers(requests, duration);
   const [markError, setMarkError] = useState("");
+  useEffect(() => {
+    if (ready && video) seekComparison(video, initialTime);
+  }, [ready, video, initialTime]);
   useEffect(() => {
     videoRef?.(video);
     return () => videoRef?.(null);

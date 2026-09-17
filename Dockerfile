@@ -16,6 +16,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV VIDEOREVIEW_AUTH_DIR=/var/data/auth
+ENV VIDEOREVIEW_DATA_DIR=/var/data
 ENV DATABASE_URL=file:/var/data/dev.db
 EXPOSE 3000
 CMD ["sh", "scripts/start-container.sh"]

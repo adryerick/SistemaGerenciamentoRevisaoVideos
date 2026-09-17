@@ -46,6 +46,8 @@ try {
     build.once("exit", (code) => code === 0 ? resolve() : reject(new Error("A compilação falhou.")));
   });
   if (stopping) throw new Error("Compartilhamento interrompido.");
+  const worker = launch(process.execPath, ["--import", "tsx", "scripts/video-worker.ts"], { stdio: "inherit" });
+  worker.once("error", (error) => { console.error(error.message); stop(1); });
   const tunnel = launch(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], { stdio: ["ignore", "pipe", "pipe"] });
   let tunnelLogs = "";
   const publicUrl = await new Promise((resolve, reject) => {
@@ -73,7 +75,7 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   if (!ready) throw new Error("O servidor não ficou disponível.");
-  await writeFile(path.join(root, ".local", "quick-tunnel.json"), JSON.stringify({ url: publicUrl, serverPid: server.pid, tunnelPid: tunnel.pid, startedAt: new Date().toISOString() }));
+  await writeFile(path.join(root, ".local", "quick-tunnel.json"), JSON.stringify({ url: publicUrl, serverPid: server.pid, tunnelPid: tunnel.pid, workerPid: worker.pid, startedAt: new Date().toISOString() }));
   console.log(`\nLINK PÚBLICO: ${publicUrl}\nEntre por esse endereço para copiar os links de revisão com o domínio público.\nMantenha este terminal e o computador ligados. Ctrl+C encerra apenas estes processos.\n`);
 } catch (error) {
   console.error(error.message);

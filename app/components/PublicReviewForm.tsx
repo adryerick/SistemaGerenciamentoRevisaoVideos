@@ -9,6 +9,8 @@ import VideoPlayer from "./VideoPlayer";
 import { useReviewDraft } from "../lib/use-review-draft";
 import ReviewThread from "./ReviewThread";
 import VersionReviewStatus from "./VersionReviewStatus";
+import VersionComparison from "./VersionComparison";
+import ReviewUpdates from "./ReviewUpdates";
 
 type PublicReviewFormProps = {
   reviewToken: string;
@@ -30,6 +32,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
   const [authorName, setAuthorName] = useState("");
   const [decisionError, setDecisionError] = useState("");
   const [decisionSuccess, setDecisionSuccess] = useState("");
+  const [resumeTime, setResumeTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
   const requests = changeRequests.filter((request) => request.videoVersionId === selected?.id);
@@ -83,11 +86,12 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+      <div className="lg:col-span-2"><ReviewUpdates endpoint={`/api/revisao/${reviewToken}/atividade`} /></div>
       <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
         <h2 className="text-lg font-semibold">Revisar vídeo</h2>
         <label htmlFor="review-version" className="mt-4 block text-sm text-zinc-400">Versão em revisão</label>
         <select id="review-version" value={selected.id} disabled={sending}
-          onChange={(event) => { setVideoVersionId(Number(event.target.value)); setSuccess(false); setError(""); setDecisionError(""); setDecisionSuccess(""); }}
+          onChange={(event) => { setResumeTime(videoRef.current?.currentTime ?? 0); setVideoVersionId(Number(event.target.value)); setSuccess(false); setError(""); setDecisionError(""); setDecisionSuccess(""); }}
           className="mt-2 w-full rounded-lg border border-[#303035] bg-[#111113] p-3 text-sm">
           {videoVersions.map((version, index) => <option key={version.id} value={version.id}>V{String(version.number).padStart(2, "0")} · {version.fileName}{index === 0 ? " (mais recente)" : ""}</option>)}
         </select>
@@ -96,6 +100,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
         {selected.videoUrl ? <VideoPlayer key={selected.id} videoRef={(element) => { videoRef.current = element; }}
           src={`/api/revisao/${reviewToken}/videos/${selected.id}`}
           requests={requests}
+          initialTime={resumeTime}
           onMarkTime={sending ? undefined : (seconds) => {
             draft.update({ timestamp: formatTimestamp(seconds) });
             commentRef.current?.focus();
@@ -140,6 +145,8 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
         {success && <p role="status" className="mt-4 text-sm text-emerald-300">Solicitação enviada. Obrigado pelo feedback!</p>}
       </form>
 
+      <div className="lg:col-span-2"><VersionComparison versions={videoVersions} token={reviewToken} /></div>
+
       <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5 lg:col-span-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Solicitações desta versão ({requests.length})</h2>
@@ -163,6 +170,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
               <span className={request.status === "Resolvido" ? "text-emerald-300" : "text-amber-200"}>{request.status}</span>
             </div>
             <p className="mt-3 whitespace-pre-wrap break-words text-sm text-zinc-200">{request.comment}</p>
+            {request.priority === "Alta" && <p className="mt-2 text-xs text-amber-200">Prioridade alta definida pelo editor</p>}
             {request.authorName && <p className="mt-2 text-xs text-zinc-400">Nome informado: {request.authorName}</p>}
             <p className="mt-2 text-xs text-zinc-500">Registrada em {request.createdAt}</p>
             <ReviewThread request={request} reviewToken={reviewToken} authorName={authorName} />

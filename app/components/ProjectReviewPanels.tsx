@@ -10,6 +10,9 @@ import type { ChangeRequest, VideoVersion } from "../types";
 import { uploadVideo } from "../lib/upload-video";
 import ReviewThread from "./ReviewThread";
 import VersionReviewStatus from "./VersionReviewStatus";
+import VersionComparison from "./VersionComparison";
+import { priorities, sortRequests } from "../lib/request-priority";
+import VideoJobs from "./VideoJobs";
 
 type ProjectReviewPanelsProps = {
   projectId: number;
@@ -45,7 +48,20 @@ export default function ProjectReviewPanels({
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [videoVersionId, setVideoVersionId] = useState(videoVersions[0]?.id ?? 0);
-  const visibleRequests = requests.filter((request) => requestFilter === "Todas" || request.status === requestFilter);
+  const [priorityFilter, setPriorityFilter] = useState("Todas");
+  const visibleRequests = sortRequests(requests.filter((request) => (requestFilter === "Todas" || request.status === requestFilter) && (priorityFilter === "Todas" || (request.priority ?? "Normal") === priorityFilter)));
+
+  async function changePriority(requestId: number, priority: string) {
+    if (requestBusy) return;
+    setRequestBusy(true); setRequestError("");
+    try {
+      const response = await fetch(`/api/solicitacoes/${requestId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) { setRequestError(result.error ?? "Não foi possível atualizar a prioridade."); return; }
+      router.refresh();
+    } catch { setRequestError("Falha de conexão ao atualizar a prioridade."); }
+    finally { setRequestBusy(false); }
+  }
 
   async function handleCreateVersion() {
     if (isUploading) return;
@@ -67,10 +83,10 @@ export default function ProjectReviewPanels({
       const result = await uploadVideo(`/api/projetos/${projectId}/versoes`, videoFile, setUploadProgress);
 
       router.refresh();
-      setVideoVersionId(result.id);
+      if (!result.queued) setVideoVersionId(result.id);
       setVideoFile(null);
       if (videoInput.current) videoInput.current.value = "";
-      setUploadSuccess("Vídeo enviado e preparado! A nova versão já está disponível no link do cliente.");
+      setUploadSuccess(result.queued ? "Arquivo recebido! O preparo continua em segundo plano; você já pode sair desta página. Acompanhe o andamento abaixo." : "Vídeo preparado e disponível para o cliente.");
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Não foi possível enviar o vídeo. Tente novamente.");
     } finally {
@@ -195,6 +211,7 @@ export default function ProjectReviewPanels({
 
   return (
     <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="xl:col-span-2"><VersionComparison versions={versions} /></div>
       <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
         <div className="flex items-center justify-between">
           <div>
@@ -225,7 +242,7 @@ export default function ProjectReviewPanels({
                 disabled={isUploading}
                 className="shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isUploading ? uploadProgress === 100 ? "Preparando vídeo..." : `Enviando ${uploadProgress}%` : "Enviar vídeo"}
+                {isUploading ? uploadProgress === 100 ? "Confirmando recebimento..." : `Enviando ${uploadProgress}%` : "Enviar vídeo"}
               </button>
             </div>
             <p className="mt-2 text-xs text-zinc-400">MP4, MOV, WebM, M4V, MKV, AVI, MTS ou M2TS · até 250 MB</p>
@@ -234,16 +251,19 @@ export default function ProjectReviewPanels({
             {isUploading && <progress aria-label="Progresso do envio do vídeo" value={uploadProgress} max={100} className="mt-3 h-2 w-full accent-emerald-400" />}
             <p role="status" className="mt-2 text-xs text-zinc-400">
               {isUploading
-                ? uploadProgress === 100 ? "Arquivo transmitido. Aguardando o servidor preparar e confirmar a versão; mantenha esta página aberta." : "Enviando o arquivo. Mantenha esta página aberta até a confirmação."
-                : "O vídeo será convertido automaticamente para reprodução no navegador."}
+                ? uploadProgress === 100 ? "Arquivo transmitido. Aguarde o servidor confirmar o recebimento antes de sair desta página." : "Enviando o arquivo. Mantenha esta página aberta até a confirmação."
+                : "Após confirmar o recebimento, o servidor converterá o vídeo em segundo plano. A nova versão aparece quando o preparo terminar."}
             </p>
             {uploadError && <p role="alert" className="mt-2 text-xs text-red-300">{uploadError}</p>}
             {uploadSuccess && <p role="status" className="mt-2 text-xs text-emerald-300">{uploadSuccess}</p>}
           </div>
 
+          <VideoJobs projectId={projectId} />
+
           {versions.map((videoVersion) => (
             <div
               key={videoVersion.id}
+              id={`version-${videoVersion.id}`}
               className="rounded-lg border border-[#29292d] bg-[#111113] p-4"
             >
               <div className="flex items-center justify-between gap-3">
@@ -306,7 +326,11 @@ export default function ProjectReviewPanels({
             {["Todas", ...requestStatuses].map((status) => <option key={status}>{status}</option>)}
           </select>
           <button type="button" disabled={requestBusy} onClick={() => router.refresh()} className="text-sm text-zinc-300 underline">Atualizar solicitações</button>
+          <select aria-label="Filtrar solicitações por prioridade" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="rounded-lg border border-zinc-700 bg-[#111113] p-2 text-sm">
+            <option>Todas</option>{priorities.map((priority) => <option key={priority}>{priority}</option>)}
+          </select>
         </div>
+        <p className="mt-3 text-xs text-zinc-400">Checklist: {requests.filter((request) => request.status === "Resolvido").length}/{requests.length} resolvidas. Ajustes em aberto e de alta prioridade aparecem primeiro.</p>
         {requestError && <p role="alert" className="mt-3 text-sm text-red-300">{requestError}</p>}
         <div className="mt-5 space-y-3">
           {versions.length > 0 && (
@@ -402,6 +426,10 @@ export default function ProjectReviewPanels({
                   </div>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm text-zinc-300">{request.comment}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={request.status === "Resolvido"} disabled={requestBusy} onChange={(event) => handleStatusChange(request.id, event.target.checked ? "Resolvido" : "Pendente")} />Ajuste concluído</label>
+                  <label>Prioridade <select aria-label={`Prioridade da solicitação ${request.id}`} disabled={requestBusy} value={request.priority ?? "Normal"} onChange={(event) => changePriority(request.id, event.target.value)} className="ml-2 rounded border border-zinc-700 bg-[#151517] p-1">{priorities.map((priority) => <option key={priority}>{priority}</option>)}</select></label>
+                </div>
                 {request.authorName && <p className="mt-2 text-xs text-zinc-400">Nome informado: {request.authorName}</p>}
                 <p className="mt-2 text-xs text-zinc-600">
                   V{String(versions.find((version) => version.id === request.videoVersionId)?.number ?? "?").padStart(2, "0")} · Registrada em {request.createdAt}

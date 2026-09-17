@@ -46,6 +46,7 @@ model Project {
   editor         Editor    @relation(fields: [editorId], references: [id], onDelete: Cascade)
   client         Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
   videoVersions  VideoVersion[]
+  videoJobs      VideoJob[]
   changeRequests ChangeRequest[]
 
   @@index([editorId])
@@ -75,6 +76,7 @@ model ChangeRequest {
   authorName     String?
   timestamp      String?
   status         String       @default("Pendente")
+  priority       String       @default("Normal")
   createdAt      DateTime     @default(now())
   projectId      Int
   videoVersionId Int
@@ -108,4 +110,28 @@ model ReviewDecision {
   videoVersionId Int
   videoVersion VideoVersion @relation(fields: [videoVersionId], references: [id], onDelete: Cascade)
   @@index([videoVersionId])
+}
+
+model VideoJob {
+  id String @id
+  projectId Int
+  fileName String
+  status String @default("Na fila")
+  error String?
+  attempts Int @default(0)
+  versionId Int?
+  owner String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
+  @@index([projectId])
+}
+
+model WorkerState {
+  id String @id
+  owner String
+  heartbeat DateTime
+  lastBackupAt DateTime?
+  backupError String?
 }

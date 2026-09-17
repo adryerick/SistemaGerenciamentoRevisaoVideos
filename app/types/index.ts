@@ -39,6 +39,7 @@ export type ChangeRequest = {
   videoVersionId: number;
   authorName?: string;
   replies?: ReviewReply[];
+  priority?: "Alta" | "Normal" | "Baixa";
 };
 
 export type ReviewReply = { id: number; comment: string; role: string; authorName?: string; createdAt: string };

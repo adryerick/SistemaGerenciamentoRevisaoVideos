@@ -1,5 +1,18 @@
 # Histórico de entregas
 
+## 2026-09-17 — Fechamento das melhorias de experiência do MVP
+
+- Comparação lado a lado em editor e cliente; troca de versão mantém o instante e limita vídeos mais curtos ao final.
+- Prioridades e checklist persistidos no banco, ordenação de ajustes em aberto e filtros por prioridade/status.
+- Alertas dentro do site para novidades em versões, respostas e status, com consulta somente em páginas visíveis.
+- Fila durável de conversão com worker único, limite de três envios ativos, estado de preparo, falhas, novas tentativas e descarte.
+- Recebimento confirmado antes da conversão; editor pode sair da página após a confirmação. Versão só aparece ao terminar.
+- Backups SQLite consistentes, vídeos, autenticação e originais da fila; cópias manuais ou diárias com manifesto de completude.
+- Compartilhamento e contêiner iniciam o worker; diretório privado persistente separado dos arquivos públicos.
+- Testes de fila real, retomada, falhas, prioridades, alertas, permissões e integridade do backup com dados isolados.
+- Hospedagem permanente e endereço estável continuam fora do Quick Tunnel temporário escolhido para a apresentação.
+- Validação: 29 testes aprovados em produção, build e lint; sincronização visual dos dois players, troca de versão preservando 00:01 e console sem erros.
+
 ## 2026-09-17 — Conversas, aprovação e linha do tempo
 
 - Editor e cliente podem responder a cada solicitação, sem misturar a conversa com novos ajustes.

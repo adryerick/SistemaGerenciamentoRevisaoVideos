@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
+import Database from "better-sqlite3";
+import { backupData } from "../app/lib/data-backup";
 import { convertVideoForBrowser, VideoConversionError } from "../app/lib/video-conversion";
 import { parseVideoRange } from "../app/lib/video-range";
 import { MAX_VIDEO_SIZE, validateVideoFile } from "../app/lib/video-formats";
@@ -209,6 +212,102 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           assert.equal(nextResult.reviewedBy, undefined);
           assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 409);
 
+          const asyncForm = new FormData();
+          asyncForm.append("video", new Blob([uploadedBytes], { type: "video/mp4" }), "background-test.mp4");
+          const asyncUpload = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", headers: { Prefer: "respond-async" }, body: asyncForm });
+          assert.equal(asyncUpload.status, 202, await asyncUpload.clone().text());
+          const asyncResult = await asyncUpload.json();
+          assert.equal(typeof asyncResult.jobId, "string");
+          const jobsUrl = `${base}/api/projetos/${projectId}/processamentos`;
+          assert.equal((await fetch(jobsUrl)).status, 401);
+          assert.equal((await editorFetch(`${base}/api/projetos/2147483647/processamentos`)).status, 404);
+          let prepared: { id: string; status: string; versionId: number } | undefined;
+          for (let attempt = 0; attempt < 60; attempt++) {
+            const result = await (await editorFetch(jobsUrl)).json();
+            prepared = result.jobs.find((job: { id: string }) => job.id === asyncResult.jobId);
+            if (prepared?.status === "Pronto") break;
+            assert.notEqual(prepared?.status, "Falhou", JSON.stringify(result));
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          assert.equal(prepared?.status, "Pronto");
+          assert.equal((await fetch(`${base}/api${reviewPath}/videos/${prepared!.versionId}`)).status, 200);
+          const brokenAsync = new FormData();
+          brokenAsync.append("video", new Blob(["invalid"]), "async-broken.mp4");
+          const brokenQueued = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", headers: { Prefer: "respond-async" }, body: brokenAsync });
+          assert.equal(brokenQueued.status, 202);
+          const brokenJob = await brokenQueued.json();
+          async function waitForFailure() {
+            for (let attempt = 0; attempt < 60; attempt++) {
+              const result = await (await editorFetch(jobsUrl)).json();
+              const job = result.jobs.find((item: { id: string }) => item.id === brokenJob.jobId);
+              if (job?.status === "Falhou") { assert.match(job.error, /decodificar/); return; }
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            assert.fail("Invalid asynchronous upload must report a failure");
+          }
+          await waitForFailure();
+          const retryBroken = await editorFetch(jobsUrl, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ jobId: brokenJob.jobId }) });
+          assert.equal(retryBroken.status, 200);
+          await waitForFailure();
+          assert.equal((await editorFetch(jobsUrl, { method: "DELETE", headers: jsonHeaders, body: JSON.stringify({ jobId: brokenJob.jobId }) })).status, 200);
+          assert.equal((await editorFetch(jobsUrl, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ jobId: asyncResult.jobId }) })).status, 409);
+          const backup = await backupData();
+          assert.ok(backup.startsWith(path.resolve(process.env.VIDEOREVIEW_DATA_DIR!, "backups")), "Backup must use isolated test directory");
+          assert.equal(JSON.parse(await readFile(path.join(backup, "manifest.json"), "utf8")).complete, true);
+          const snapshot = new Database(path.join(backup, "dev.db"), { readonly: true });
+          try {
+            const record = snapshot.prepare('SELECT "storagePath" FROM "VideoVersion" WHERE "id" = ?').get(prepared!.versionId) as { storagePath: string };
+            const bytes = await readFile(path.join(backup, "uploads", record.storagePath.replace(/^\/uploads\//, "")));
+            assert.ok(bytes.length > 0);
+            assert.equal((snapshot.pragma("integrity_check") as { integrity_check: string }[])[0].integrity_check, "ok");
+          } finally { snapshot.close(); }
+          assert.equal(JSON.parse(await readFile(path.join(backup, "auth/auth.json"), "utf8")).email, "mvp@example.test");
+          const priorityUpdated = await editorFetch(`${base}/api/solicitacoes/${latestRequest.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ priority: "Alta" }) });
+          assert.equal(priorityUpdated.status, 200); assert.equal((await priorityUpdated.json()).priority, "Alta");
+          assert.equal((await editorFetch(`${base}/api/solicitacoes/${latestRequest.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ priority: "Unknown" }) })).status, 400);
+          assert.equal((await fetch(`${base}/api/atividade`)).status, 401);
+          const beforeActivity = await (await fetch(`${base}/api${reviewPath}/atividade`)).json();
+          assert.equal((await postJson(clientReplies, { comment: "Novo alerta de conversa" })).status, 201);
+          const afterActivity = await (await fetch(`${base}/api${reviewPath}/atividade`)).json();
+          assert.notEqual(beforeActivity.signature, afterActivity.signature);
+
+          // Stop only the worker created by this isolated test harness.
+          const workerPid = Number(process.env.VIDEO_TEST_WORKER_PID);
+          const testDatabasePath = path.resolve(process.env.DATABASE_URL!.slice(5));
+          assert.ok(testDatabasePath.startsWith(`${path.resolve(tmpdir())}${path.sep}videoreview-mvp-`));
+          assert.ok(Number.isSafeInteger(workerPid) && workerPid > 0);
+          if (process.platform === "win32") await run("taskkill", ["/PID", String(workerPid), "/T", "/F"], { windowsHide: true });
+          else process.kill(workerPid, "SIGTERM");
+          const interruptedId = randomUUID();
+          const interruptedDirectory = path.join(process.env.VIDEOREVIEW_DATA_DIR!, "video-queue", interruptedId);
+          await mkdir(interruptedDirectory, { recursive: true });
+          await writeFile(path.join(interruptedDirectory, "input"), uploadedBytes);
+          const isolatedDb = new Database(testDatabasePath);
+          isolatedDb.prepare('UPDATE "WorkerState" SET "heartbeat" = 0 WHERE "id" = \'video-worker\'').run();
+          isolatedDb.prepare('INSERT INTO "VideoJob" ("id", "projectId", "fileName", "status", "attempts", "updatedAt") VALUES (?, ?, ?, ?, ?, ?)').run(interruptedId, projectId, "interrupted-test.mp4", "Preparando", 1, Date.now());
+          isolatedDb.close();
+          const offlineForm = new FormData();
+          offlineForm.append("video", new Blob([uploadedBytes]), "offline-test.mp4");
+          assert.equal((await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", headers: { Prefer: "respond-async" }, body: offlineForm })).status, 503);
+          const restarted = spawn(process.execPath, ["--import", "tsx", "scripts/video-worker.ts"], { cwd: process.cwd(), env: process.env, windowsHide: true, stdio: "ignore" });
+          try {
+            let resumed: { status: string; attempts: number; versionId: number } | undefined;
+            for (let attempt = 0; attempt < 100; attempt++) {
+              const result = await (await editorFetch(jobsUrl)).json();
+              resumed = result.jobs.find((job: { id: string }) => job.id === interruptedId);
+              if (resumed?.status === "Pronto") break;
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            assert.equal(resumed?.status, "Pronto"); assert.equal(resumed?.attempts, 2);
+            assert.equal((await fetch(`${base}/api${reviewPath}/videos/${resumed!.versionId}`)).status, 200);
+            const snapshotAfterRestart = new Database(testDatabasePath, { readonly: true });
+            try { assert.equal((snapshotAfterRestart.prepare('SELECT COUNT(*) AS count FROM "VideoVersion" WHERE "storagePath" LIKE ?').get(`%${interruptedId}%`) as { count: number }).count, 1); }
+            finally { snapshotAfterRestart.close(); }
+          } finally {
+            if (process.platform === "win32" && restarted.pid) await run("taskkill", ["/PID", String(restarted.pid), "/T", "/F"], { windowsHide: true });
+            else restarted.kill("SIGTERM");
+          }
+
           const corrupt = new FormData();
           corrupt.append("video", new Blob(["invalid"]), "broken.mp4");
           const rejected = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: corrupt });
@@ -219,6 +318,7 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           });
           assert.equal(disabled.status, 200);
           assert.equal((await fetch(publicVideo)).status, 404);
+          assert.equal((await fetch(`${base}/api${reviewPath}/atividade`)).status, 404);
           assert.equal((await postJson(clientReplies, { comment: "Link disabled" })).status, 404);
           assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 404);
           assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Não deve aceitar", videoVersionId: uploadedBody.id }) })).status, 404);

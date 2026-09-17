@@ -8,6 +8,7 @@ import { toVideoVersionDto } from "../../../../lib/presenters";
 import { prisma } from "../../../../lib/prisma";
 import { convertVideoForBrowser, VideoConversionError } from "../../../../lib/video-conversion";
 import { MAX_VIDEO_SIZE, validateVideoFile } from "../../../../lib/video-formats";
+import { jobDirectory, removeJobFiles, workerOnline } from "../../../../lib/video-jobs";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,22 @@ async function handlePOST(
   try {
     const project = await prisma.project.findFirst({ where: { id: projectId, editorId: editor.id }, select: { id: true } });
     if (!project) return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
+
+    if (request.headers.get("prefer") === "respond-async") {
+      if (!await workerOnline()) return Response.json({ error: "O processamento em segundo plano está offline. Execute npm run worker no servidor e tente novamente; seu arquivo foi mantido." }, { status: 503 });
+      const jobId = randomUUID();
+      try {
+        await mkdir(jobDirectory(jobId), { recursive: true });
+        await writeFile(path.join(jobDirectory(jobId), "input"), Buffer.from(await video.arrayBuffer()));
+        const queued = await prisma.$transaction(async (tx) => {
+          if (await tx.videoJob.count({ where: { status: { in: ["Na fila", "Preparando"] } } }) >= 3) return false;
+          await tx.videoJob.create({ data: { id: jobId, projectId, fileName: video.name.slice(0, 255) } });
+          return true;
+        });
+        if (!queued) { await removeJobFiles(jobId); return Response.json({ error: "A fila está cheia (3 vídeos). Aguarde um preparo terminar e tente novamente." }, { status: 429 }); }
+        return Response.json({ jobId, status: "Na fila" }, { status: 202 });
+      } catch (error) { await removeJobFiles(jobId).catch(console.error); throw error; }
+    }
 
     temporaryDirectory = await mkdtemp(path.join(tmpdir(), "videoreview-convert-"));
     const input = path.join(temporaryDirectory, "input");

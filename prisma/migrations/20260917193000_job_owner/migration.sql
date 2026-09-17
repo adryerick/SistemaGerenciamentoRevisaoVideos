@@ -1,0 +1,1 @@
+ALTER TABLE "VideoJob" ADD COLUMN "owner" TEXT;

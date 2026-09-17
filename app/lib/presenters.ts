@@ -44,6 +44,7 @@ type ChangeRequestRecord = {
   status: string;
   createdAt: Date;
   authorName?: string | null;
+  priority?: string;
   replies?: { id: number; comment: string; role: string; authorName: string | null; createdAt: Date }[];
 };
 
@@ -102,6 +103,7 @@ export function toChangeRequestDto(
     status: status as ChangeRequest["status"],
     createdAt: request.createdAt.toLocaleDateString("pt-BR"),
     authorName: request.authorName ?? undefined,
+    priority: (["Alta", "Normal", "Baixa"].includes(request.priority ?? "") ? request.priority : "Normal") as ChangeRequest["priority"],
     replies: request.replies?.map((reply) => ({ ...reply, authorName: reply.authorName ?? undefined, createdAt: reply.createdAt.toLocaleString("pt-BR") })) ?? [],
   };
 }
