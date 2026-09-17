@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { hasVideoMetadata, markVideoTime, subscribeVideoReadiness } from "../lib/video-navigation";
 
 type VideoPlayerProps = {
   src: string;
@@ -10,21 +11,26 @@ type VideoPlayerProps = {
 
 export default function VideoPlayer({ src, videoRef, onMarkTime }: VideoPlayerProps) {
   const [error, setError] = useState("");
-  const [ready, setReady] = useState(false);
+  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+  const ready = useSyncExternalStore(
+    useCallback((notify) => subscribeVideoReadiness(video, notify), [video]),
+    useCallback(() => hasVideoMetadata(video), [video]),
+    () => false,
+  );
   const [buffering, setBuffering] = useState(false);
-  const localRef = useRef<HTMLVideoElement | null>(null);
+  const [markError, setMarkError] = useState("");
+  useEffect(() => {
+    videoRef?.(video);
+    return () => videoRef?.(null);
+  }, [video, videoRef]);
   return (
     <div className="mt-3">
       <video
-        ref={(element) => {
-          localRef.current = element;
-          videoRef?.(element);
-        }}
+        ref={setVideo}
         controls
         playsInline
         preload="metadata"
         src={src}
-        onLoadedMetadata={() => setReady(true)}
         onLoadedData={() => setError("")}
         onWaiting={() => setBuffering(true)}
         onPlaying={() => setBuffering(false)}
@@ -32,7 +38,6 @@ export default function VideoPlayer({ src, videoRef, onMarkTime }: VideoPlayerPr
         onPause={() => setBuffering(false)}
         onError={(event) => {
           const code = event.currentTarget.error?.code;
-          setReady(false);
           setBuffering(false);
           setError(code === 3 || code === 4
             ? "O navegador não conseguiu reproduzir este vídeo. Teste a aceleração gráfica nas configurações e reinicie o navegador, ou teste em outro navegador. Se persistir, peça ao editor para reenviar o arquivo."
@@ -42,20 +47,19 @@ export default function VideoPlayer({ src, videoRef, onMarkTime }: VideoPlayerPr
       />
       {buffering && <p role="status" className="mt-2 text-xs text-zinc-300">Carregando o trecho do vídeo...</p>}
       {onMarkTime && (
-        <button type="button" disabled={!ready || !!error}
+        <button type="button" disabled={!!error}
           onClick={() => {
-            const video = localRef.current;
-            if (!video) return;
-            video.pause();
-            onMarkTime(video.currentTime);
+            setMarkError(markVideoTime(video, onMarkTime) ? "" : "Aguarde o vídeo carregar e tente marcar novamente.");
           }}
           className="mt-3 rounded-lg border border-zinc-600 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40">
           Comentar neste instante
         </button>
       )}
+      {onMarkTime && !ready && !error && <p role="status" className="mt-2 text-xs text-zinc-400">A minutagem estará disponível assim que o vídeo carregar.</p>}
+      {markError && !ready && <p role="status" className="mt-2 text-xs text-amber-200">{markError}</p>}
       {error && <div className="mt-3 rounded-lg border border-red-900/50 p-3">
         <p role="alert" className="text-sm text-red-300">{error}</p>
-        <button type="button" onClick={() => { setError(""); setReady(false); localRef.current?.load(); }} className="mt-3 rounded-lg border border-zinc-600 px-3 py-2 text-sm">Tentar carregar novamente</button>
+        <button type="button" onClick={() => { setError(""); video?.load(); }} className="mt-3 rounded-lg border border-zinc-600 px-3 py-2 text-sm">Tentar carregar novamente</button>
       </div>}
     </div>
   );

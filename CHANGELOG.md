@@ -1,5 +1,13 @@
 # Histórico de entregas
 
+## 2026-09-17 — Captura de minutagem na revisão do cliente
+
+- Player consulta o estado nativo do vídeo e acompanha metadados, reprodução e recarregamento, em vez de depender exclusivamente do primeiro evento loadedmetadata.
+- Vídeos em cache ou carregados antes da hidratação não deixam o botão de marcar permanentemente bloqueado.
+- Clique pausa o vídeo, captura o instante real e leva ao comentário; antes dos metadados, exibe uma orientação de carregamento.
+- Testes de captura em zero e em instante fracionário, estado carregado em cache e remoção das assinaturas de eventos.
+- Conferência visual em produção isolada: instante 00:01 preenchido, vídeo pausado, foco no comentário e botão funcional após recarregar; console sem erros.
+
 ## 2026-09-17 — Correção do upload e experiência de revisão
 
 - Reproduzido o erro de envio incompleto com MP4 acima de 10 MB; identificado o truncamento padrão do corpo no Next Proxy.

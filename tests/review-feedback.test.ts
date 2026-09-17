@@ -2,7 +2,41 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { formatTimestamp, parseTimestamp, validateReviewInput } from "../app/lib/review-feedback";
 import { toProjectDto } from "../app/lib/presenters";
-import { seekToTimestamp } from "../app/lib/video-navigation";
+import { hasVideoMetadata, markVideoTime, seekToTimestamp, subscribeVideoReadiness } from "../app/lib/video-navigation";
+
+test("marking works with cached metadata, pauses and captures the current instant", () => {
+  let paused = false;
+  let marked: number | undefined;
+  const video = { readyState: 4, error: null, currentTime: 10.8, pause() { paused = true; } };
+  const element = video as unknown as HTMLVideoElement;
+  assert.equal(hasVideoMetadata(element), true);
+  assert.equal(markVideoTime(element, (seconds) => { marked = seconds; }), true);
+  assert.equal(marked, 10.8);
+  assert.equal(paused, true);
+  video.currentTime = 0;
+  assert.equal(markVideoTime(element, (seconds) => { marked = seconds; }), true);
+  assert.equal(marked, 0);
+  video.readyState = 0;
+  assert.equal(markVideoTime(element, () => assert.fail("Must not mark before metadata")), false);
+});
+
+test("readiness follows native video state even when loadedmetadata was missed", () => {
+  const video = new EventTarget() as EventTarget & { readyState: number; error: null };
+  video.readyState = 0;
+  video.error = null;
+  let changes = 0;
+  const unsubscribe = subscribeVideoReadiness(video as unknown as HTMLVideoElement, () => { changes++; });
+  video.readyState = 4;
+  video.dispatchEvent(new Event("canplay"));
+  assert.equal(changes, 1);
+  assert.equal(hasVideoMetadata(video as unknown as HTMLVideoElement), true);
+  video.readyState = 0;
+  video.dispatchEvent(new Event("emptied"));
+  assert.equal(hasVideoMetadata(video as unknown as HTMLVideoElement), false);
+  unsubscribe();
+  video.dispatchEvent(new Event("playing"));
+  assert.equal(changes, 2);
+});
 
 test("timestamps normalize valid values and reject malformed input", () => {
   assert.equal(parseTimestamp("00:23"), 23);
