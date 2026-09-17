@@ -1,5 +1,14 @@
 # Histórico de entregas
 
+## 2026-09-17 — Prévia visual dos projetos
+
+- Cartões de projetos e dashboard mostram uma miniatura real da versão mais recente, sem transmitir o vídeo inteiro.
+- Miniaturas JPEG leves, geradas sob demanda para vídeos novos ou já existentes, com fallback para clips curtos.
+- Cache privado derivado e API protegida pela sessão e propriedade do projeto; sem migração do banco.
+- Clique na prévia abre os detalhes; projetos sem vídeo e falhas de imagem têm indicação própria.
+- Testes de seleção da última versão, caminho seguro, JPEG, cache e acesso negado sem sessão ou fora do projeto.
+- Validação: 31 testes aprovados em produção, lint e build; imagem carregada nos cartões de Projetos e Dashboard em instalação isolada, console sem erros.
+
 ## 2026-09-17 — Fechamento das melhorias de experiência do MVP
 
 - Comparação lado a lado em editor e cliente; troca de versão mantém o instante e limita vídeos mais curtos ao final.

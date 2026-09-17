@@ -8,6 +8,7 @@ um editor e seus clientes. Next.js 16, React 19, TypeScript, Tailwind, Prisma e 
 - Login real do editor, sessão de 8 horas, saída da conta e recuperação local de acesso.
 - Cadastro, consulta, edição e exclusão de clientes sem projetos vinculados.
 - Criação, pesquisa, edição de nome/descrição/status e exclusão de projetos.
+- Miniatura do vídeo mais recente nos cartões de projetos e dashboard; clique abre os vídeos do projeto.
 - Upload, conversão, reprodução, histórico e exclusão de versões.
 - Link de revisão sem cadastro de cliente, com ativação/desativação.
 - Comentários por versão, minutagem opcional, captura do instante do player e retorno ao trecho.
@@ -158,6 +159,8 @@ pública, comentários, edição, progresso e desativação. Reserva um ID de pr
 - `npm run test:mvp -- --check-review --production`: compila produção e prepara
   duas versões e comentários exclusivos de teste para conferência visual da revisão.
   Pressione Enter para apagar apenas os vídeos e banco isolados.
+- `npm run test:mvp -- --check-thumbnails --production`: prepara os mesmos vídeos
+  isolados e uma conta fictícia para conferir as miniaturas em Projetos/Dashboard.
 - `npm run test:mvp -- --production`: executa a suíte integrada na compilação de produção.
 
 O teste de conversão inclui H.264, HEVC de 10 bits, WebM/VP9 e ProRes sem áudio.

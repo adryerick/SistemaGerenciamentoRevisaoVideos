@@ -133,6 +133,20 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           const largeResult = await largeUpload.json();
           assert.equal(largeUpload.status, 201, `Upload above 10 MB: ${JSON.stringify(largeResult)}`);
           assert.equal(largeResult.number, 2);
+          const previewProjects = await (await editorFetch(`${base}/api/projetos`)).json();
+          const preview = previewProjects.find((item: { id: number }) => item.id === projectId);
+          assert.equal(preview.thumbnailUrl, `/api/projetos/${projectId}/versoes/${largeResult.id}/miniatura`);
+          assert.equal((await fetch(`${base}${preview.thumbnailUrl}`)).status, 401);
+          const imageResponse = await editorFetch(`${base}${preview.thumbnailUrl}`);
+          assert.equal(imageResponse.status, 200);
+          assert.match(imageResponse.headers.get("content-type")!, /image\/jpeg/);
+          assert.match(imageResponse.headers.get("cache-control")!, /no-store/);
+          const thumbnailBytes = Buffer.from(await imageResponse.arrayBuffer());
+          assert.equal(thumbnailBytes.readUInt16BE(0), 0xffd8);
+          assert.ok(thumbnailBytes.length < 100000);
+          assert.deepEqual(Buffer.from(await (await editorFetch(`${base}${preview.thumbnailUrl}`)).arrayBuffer()), thumbnailBytes);
+          assert.equal((await editorFetch(`${base}/api/projetos/2147483647/versoes/${largeResult.id}/miniatura`)).status, 404);
+          assert.equal((await editorFetch(`${base}/api/projetos/${projectId}/versoes/2147483647/miniatura`)).status, 404);
           assert.equal((await editorFetch(`${base}${largeResult.videoUrl}`, { headers: { Range: "bytes=0-99" } })).status, 206);
 
           const details = await (await editorFetch(`${base}/projetos/${projectId}`)).text();

@@ -11,6 +11,7 @@ async function handleGET() {
       client: { select: { name: true } },
       _count: { select: { changeRequests: true } },
       changeRequests: { select: { status: true } },
+      videoVersions: { orderBy: { number: "desc" }, take: 1, select: { id: true, storagePath: true } },
     },
     orderBy: { createdAt: "desc" },
   });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Project } from "../types";
+import ProjectThumbnail from "./ProjectThumbnail";
 
 type ProjectCardProps = {
   project: Project;
@@ -14,13 +15,7 @@ export default function ProjectCard({
     <div className="overflow-hidden rounded-xl border border-[#29292d] bg-[#151517]">
 
       {/* THUMBNAIL */}
-      <div className="flex h-40 items-center justify-center bg-gradient-to-br from-[#2e2e32] to-[#171719]">
-
-        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl">
-          ▶
-        </div>
-
-      </div>
+      <ProjectThumbnail project={project} />
 
       {/* CONTEÚDO */}
       <div className="p-5">

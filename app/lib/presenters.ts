@@ -23,6 +23,7 @@ type ProjectRecord = {
   client: { name: string };
   _count?: { changeRequests: number };
   changeRequests?: { status: string }[];
+  videoVersions?: { id: number; storagePath: string | null }[];
 };
 
 type VideoVersionRecord = {
@@ -70,6 +71,7 @@ export function toProjectDto(project: ProjectRecord): Project {
       ? (project.changeRequests.length ? Math.round(100 * project.changeRequests.filter((request) => request.status === "Resolvido").length / project.changeRequests.length) : 0)
       : project.progress,
     description: project.description ?? "",
+    thumbnailUrl: project.videoVersions?.[0]?.storagePath ? `/api/projetos/${project.id}/versoes/${project.videoVersions[0].id}/miniatura` : undefined,
   };
 }
 

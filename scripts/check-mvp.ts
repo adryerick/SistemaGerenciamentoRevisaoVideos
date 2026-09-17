@@ -73,7 +73,7 @@ async function main() {
       assert.ok(attempt < 29, `Test worker did not start: ${logs}`);
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    if (process.argv.includes("--check-review")) {
+    if (process.argv.includes("--check-review") || process.argv.includes("--check-thumbnails")) {
       assert.ok(process.stdin.isTTY && ffmpegPath, "Use --check-review em um terminal interativo com FFmpeg instalado.");
       const headers = { Cookie: cookie, "Content-Type": "application/json" };
       const clientResponse = await fetch(`${base}/api/clients`, { method: "POST", headers, body: JSON.stringify({ name: "Cliente de revisão visual", email: "review@example.test" }) });
@@ -104,6 +104,7 @@ async function main() {
       const reviewPath = html.match(/\/revisao\/[a-z0-9]+/)?.[0];
       assert.ok(reviewPath);
       console.log(`REVISÃO VISUAL ISOLADA: ${base}${reviewPath}`);
+      if (process.argv.includes("--check-thumbnails")) console.log(`MINIATURAS ISOLADAS: ${base}/projetos. Conta APENAS de teste: mvp@example.test / MVP-test-password-2026`);
       console.log("Confira apenas esta revisão pública. Pressione Enter para remover os vídeos e o banco exclusivos de teste.");
       await new Promise<void>((resolve) => { process.stdin.resume(); process.stdin.once("data", () => { process.stdin.pause(); resolve(); }); });
       return;

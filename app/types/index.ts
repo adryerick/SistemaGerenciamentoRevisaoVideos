@@ -15,6 +15,7 @@ export type Project = {
   requests: number;
   progress: number;
   description: string;
+  thumbnailUrl?: string;
 };
 
 export type VideoVersion = {
