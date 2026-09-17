@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { access, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { promisify } from "node:util";
+import ffmpegPath from "ffmpeg-static";
 
 async function main() {
   const root = process.cwd();
@@ -30,11 +32,22 @@ async function main() {
   const port = 3107;
   // A separate hostname keeps browser test cookies apart from localhost:3000.
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, DATABASE_URL: `file:${databaseFile}`, VIDEOREVIEW_AUTH_DIR: authDir, NEXT_DIST_DIR: ".next-test", NEXT_TELEMETRY_DISABLED: "1" };
+  const env = { ...process.env, APP_URL: base, DATABASE_URL: `file:${databaseFile}`, VIDEOREVIEW_AUTH_DIR: authDir, NEXT_DIST_DIR: ".next-test", NEXT_TELEMETRY_DISABLED: "1" };
+  const production = process.argv.includes("--production");
+  if (production) {
+    const build = spawn(process.execPath, ["node_modules/next/dist/bin/next", "build"], { cwd: root, env, windowsHide: true, stdio: "inherit" });
+    const code = await new Promise((resolve, reject) => { build.once("error", reject); build.once("exit", resolve); });
+    if (code !== 0) {
+      assert.ok(path.resolve(temporary).startsWith(`${path.resolve(tmpdir())}${path.sep}videoreview-mvp-`));
+      await rm(temporary, { recursive: true, force: true });
+    }
+    assert.equal(code, 0, "Production test build must succeed");
+  }
   let logs = "";
-  const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--port", String(port)], { cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", production ? "start" : "dev", "--port", String(port)], { cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   server.stdout.on("data", (data) => { logs = (logs + data).slice(-16000); });
   server.stderr.on("data", (data) => { logs = (logs + data).slice(-16000); });
+  let reviewFixture: { id: number; cookie: string } | undefined;
   try {
     let ready = false;
     for (let attempt = 0; attempt < 90; attempt++) {
@@ -51,6 +64,36 @@ async function main() {
     const cookie = login.headers.get("set-cookie")?.split(";")[0];
     assert.ok(cookie);
     assert.match(login.headers.get("set-cookie")!, /HttpOnly/i);
+    if (process.argv.includes("--check-review")) {
+      assert.ok(process.stdin.isTTY && ffmpegPath, "Use --check-review em um terminal interativo com FFmpeg instalado.");
+      const headers = { Cookie: cookie, "Content-Type": "application/json" };
+      const clientResponse = await fetch(`${base}/api/clients`, { method: "POST", headers, body: JSON.stringify({ name: "Cliente de revisão visual", email: "review@example.test" }) });
+      assert.equal(clientResponse.status, 201);
+      const client = await clientResponse.json();
+      const projectResponse = await fetch(`${base}/api/projetos`, { method: "POST", headers, body: JSON.stringify({ name: "Conferência visual da revisão", clientId: client.id, description: "Dados isolados de teste; não modifica os projetos reais." }) });
+      assert.equal(projectResponse.status, 201);
+      const project = await projectResponse.json();
+      assert.equal(project.id, testProjectId);
+      reviewFixture = { id: project.id, cookie };
+      const sample = path.join(temporary, "sample.mp4");
+      await promisify(execFile)(ffmpegPath!, ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=24", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-threads", "2", sample], { windowsHide: true });
+      for (let index = 1; index <= 2; index++) {
+        const form = new FormData();
+        form.append("video", new Blob([await readFile(sample)], { type: "video/mp4" }), `Teste-visual-${index}.mp4`);
+        const upload: Response = await fetch(`${base}/api/projetos/${project.id}/versoes`, { method: "POST", headers: { Cookie: cookie }, body: form });
+        assert.equal(upload.status, 201, await upload.clone().text());
+        const version = await upload.json();
+        const feedback = await fetch(`${base}/api/projetos/${project.id}/solicitacoes`, { method: "POST", headers, body: JSON.stringify({ comment: `Conferir o ajuste da versão ${index}`, videoVersionId: version.id, timestamp: "00:01" }) });
+        assert.equal(feedback.status, 201);
+      }
+      const html = await (await fetch(`${base}/projetos/${project.id}`, { headers: { Cookie: cookie } })).text();
+      const reviewPath = html.match(/\/revisao\/[a-z0-9]+/)?.[0];
+      assert.ok(reviewPath);
+      console.log(`REVISÃO VISUAL ISOLADA: ${base}${reviewPath}`);
+      console.log("Confira apenas esta revisão pública. Pressione Enter para remover os vídeos e o banco exclusivos de teste.");
+      await new Promise<void>((resolve) => { process.stdin.resume(); process.stdin.once("data", () => { process.stdin.pause(); resolve(); }); });
+      return;
+    }
     if (process.argv.includes("--check-forms")) {
       assert.ok(process.stdin.isTTY, "Use --check-forms em um terminal interativo.");
       const fixture = await fetch(`${base}/api/clients`, { method: "POST", headers: { Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ name: "Cliente de teste do formulário", email: "forms@example.test" }) });
@@ -95,6 +138,10 @@ async function main() {
       console.log("✔ Recuperação local: troca de acesso, uso único, sessões antigas invalidadas e ID preservado.");
     }
   } finally {
+    if (reviewFixture) {
+      assert.equal(reviewFixture.id, testProjectId);
+      assert.equal((await fetch(`${base}/api/projetos/${reviewFixture.id}`, { method: "DELETE", headers: { Cookie: reviewFixture.cookie } })).status, 200);
+    }
     if (server.exitCode === null) {
       // Windows Next dev launches a child; stop only the process tree we created.
       if (process.platform === "win32" && server.pid) {

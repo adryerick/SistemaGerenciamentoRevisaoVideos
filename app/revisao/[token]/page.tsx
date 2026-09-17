@@ -27,7 +27,7 @@ export default async function PublicReviewPage({
 
   return (
     <main className="min-h-screen bg-[#0d0d0f] px-5 py-10 text-white sm:px-8">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-6xl">
         <p className="text-sm font-medium text-zinc-500">VideoReview</p>
         <h1 className="mt-3 text-3xl font-semibold">{project.name}</h1>
         {project.description && (

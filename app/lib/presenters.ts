@@ -75,7 +75,7 @@ export function toVideoVersionDto(version: VideoVersionRecord): VideoVersion {
     projectId: version.projectId,
     number: version.number,
     fileName: version.fileName,
-    videoUrl: version.storagePath ?? undefined,
+    videoUrl: version.storagePath ? `/api/projetos/${version.projectId}/versoes/${version.id}/video` : undefined,
     sentAt: version.sentAt.toLocaleDateString("pt-BR"),
   };
 }

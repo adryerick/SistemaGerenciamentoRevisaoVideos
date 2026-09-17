@@ -1,5 +1,18 @@
 # Histórico de entregas
 
+## 2026-09-17 — Correção do upload e experiência de revisão
+
+- Reproduzido o erro de envio incompleto com MP4 acima de 10 MB; identificado o truncamento padrão do corpo no Next Proxy.
+- Buffer de 260 MB para o limite de 250 MB com envelope multipart; validação antecipada de Content-Length excessivo.
+- Progresso real do transporte, etapa de preparação, confirmação de publicação e mensagens de sessão, conexão, timeout e recusa de tamanho pelo gateway.
+- Arquivo selecionado preservado em falhas; orientação para arquivos grandes no compartilhamento gratuito.
+- Revisão responsiva com vídeo e formulário lado a lado no desktop, filtros por status e contagem de solicitações resolvidas.
+- Rascunhos locais separados por link e versão, restauração sem conflito de hidratação e limpeza após envio confirmado.
+- Player com indicação de carregamento do trecho e botão de nova tentativa em falhas.
+- Corrigida também a reprodução do editor em produção: vídeos enviados após o build são servidos por API autenticada com suporte a Range, sem depender do inventário estático da pasta public.
+- Regressão integrada com upload real acima de 10 MB, conversão e leitura parcial; modo isolado de conferência visual com duas versões e execução de testes em produção.
+- Validação final: 21 testes aprovados também em produção, checagem integrada de recuperação, lint e build. Conferência no navegador: rascunho restaurado, isolamento entre versões, comentário enviado e filtro de resolvidos; nenhum erro no console.
+
 ## 2026-09-17 — Compartilhamento gratuito do MVP
 
 - Comando `npm run share` compila uma versão de produção separada, inicia na porta 3001 e gera um link HTTPS com Cloudflare Quick Tunnel.

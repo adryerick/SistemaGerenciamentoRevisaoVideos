@@ -7,7 +7,7 @@ import path from "node:path";
 import { toVideoVersionDto } from "../../../../lib/presenters";
 import { prisma } from "../../../../lib/prisma";
 import { convertVideoForBrowser, VideoConversionError } from "../../../../lib/video-conversion";
-import { validateVideoFile } from "../../../../lib/video-formats";
+import { MAX_VIDEO_SIZE, validateVideoFile } from "../../../../lib/video-formats";
 
 export const runtime = "nodejs";
 
@@ -18,11 +18,15 @@ async function handlePOST(
   const { id } = await params;
   const projectId = Number(id);
   const editor = await getDemoEditor();
+  const contentLength = Number(request.headers.get("content-length"));
+  if (contentLength > MAX_VIDEO_SIZE + 1024 * 1024) {
+    return Response.json({ error: "O vídeo deve ter no máximo 250 MB." }, { status: 413 });
+  }
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return Response.json({ error: "Envio incompleto ou inválido. Selecione o vídeo e tente novamente." }, { status: 400 });
+    return Response.json({ error: "O envio foi interrompido ou o arquivo não chegou completo. Verifique a conexão e tente novamente; o vídeo selecionado será mantido." }, { status: 400 });
   }
   const video = formData.get("video");
 

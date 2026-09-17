@@ -14,6 +14,7 @@ const run = promisify(execFile);
 const editorFetch: typeof fetch = (input, init) => {
   const headers = new Headers(init?.headers);
   if (process.env.VIDEO_TEST_COOKIE) headers.set("Cookie", process.env.VIDEO_TEST_COOKIE);
+  if (process.env.VIDEO_TEST_BASE_URL) headers.set("Origin", process.env.VIDEO_TEST_BASE_URL);
   return fetch(input, { ...init, headers });
 };
 
@@ -118,6 +119,19 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           const inspected = await run(ffmpegPath!, ["-hide_banner", "-i", uploadedPath, "-f", "null", "-"], { windowsHide: true });
           assert.match(inspected.stderr, /Video: h264/);
 
+          // A valid MP4 free atom keeps the sample playable while reproducing
+          // uploads above Next Proxy's default 10 MB request-body buffer.
+          const padding = Buffer.alloc(11 * 1024 * 1024);
+          padding.writeUInt32BE(padding.length, 0);
+          padding.write("free", 4, "ascii");
+          const largeForm = new FormData();
+          largeForm.append("video", new Blob([uploadedBytes, padding], { type: "video/mp4" }), "large-upload-regression.mp4");
+          const largeUpload = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: largeForm });
+          const largeResult = await largeUpload.json();
+          assert.equal(largeUpload.status, 201, `Upload above 10 MB: ${JSON.stringify(largeResult)}`);
+          assert.equal(largeResult.number, 2);
+          assert.equal((await editorFetch(`${base}${largeResult.videoUrl}`, { headers: { Range: "bytes=0-99" } })).status, 206);
+
           const details = await (await editorFetch(`${base}/projetos/${projectId}`)).text();
           const reviewPath = details.match(/\/revisao\/[a-z0-9]+/)?.[0];
           assert.ok(reviewPath && !reviewPath.endsWith("undefined"));
@@ -132,7 +146,7 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           assert.equal((await fetch(publicVideo, { headers: { Range: `bytes=${uploadedBytes.length}-` } })).status, 416);
 
           const feedbackUrl = `${base}/api${reviewPath}/solicitacoes`;
-          const jsonHeaders = { "Content-Type": "application/json" };
+          const jsonHeaders = { "Content-Type": "application/json", Origin: base };
           assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: "not-json" })).status, 400);
           assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Teste", videoVersionId: uploadedBody.id, timestamp: "00:99" }) })).status, 400);
           assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Teste", videoVersionId: 2147483647 }) })).status, 404);

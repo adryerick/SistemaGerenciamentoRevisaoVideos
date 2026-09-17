@@ -7,6 +7,7 @@ import { formatTimestamp, parseTimestamp, validateReviewInput } from "../lib/rev
 import { seekToTimestamp } from "../lib/video-navigation";
 import { VIDEO_ACCEPT, validateVideoFile } from "../lib/video-formats";
 import type { ChangeRequest, VideoVersion } from "../types";
+import { uploadVideo } from "../lib/upload-video";
 
 type ProjectReviewPanelsProps = {
   projectId: number;
@@ -36,6 +37,8 @@ export default function ProjectReviewPanels({
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSuccess, setUploadSuccess] = useState("");
   const videoInput = useRef<HTMLInputElement>(null);
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
@@ -43,6 +46,7 @@ export default function ProjectReviewPanels({
   const visibleRequests = requests.filter((request) => requestFilter === "Todas" || request.status === requestFilter);
 
   async function handleCreateVersion() {
+    if (isUploading) return;
     if (!videoFile) {
       setUploadError("Selecione o arquivo de vídeo da nova versão.");
       return;
@@ -55,26 +59,18 @@ export default function ProjectReviewPanels({
     }
     setIsUploading(true);
     setUploadError("");
+    setUploadSuccess("");
+    setUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append("video", videoFile);
-      const response = await fetch(`/api/projetos/${projectId}/versoes`, {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setUploadError(result.error ?? "Não foi possível enviar a versão. Tente novamente.");
-        return;
-      }
+      const result = await uploadVideo(`/api/projetos/${projectId}/versoes`, videoFile, setUploadProgress);
 
       router.refresh();
       setVideoVersionId(result.id);
       setVideoFile(null);
       if (videoInput.current) videoInput.current.value = "";
-    } catch {
-      setUploadError("Não foi possível enviar o vídeo. Tente novamente.");
+      setUploadSuccess("Vídeo enviado e preparado! A nova versão já está disponível no link do cliente.");
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Não foi possível enviar o vídeo. Tente novamente.");
     } finally {
       setIsUploading(false);
     }
@@ -219,7 +215,7 @@ export default function ProjectReviewPanels({
                 aria-label="Arquivo da nova versão"
                 disabled={isUploading}
                 accept={VIDEO_ACCEPT}
-                onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => { setVideoFile(event.target.files?.[0] ?? null); setUploadError(""); setUploadSuccess(""); }}
                 className="min-w-0 flex-1 rounded-lg border border-[#303035] bg-[#151517] px-3 py-2 text-sm text-zinc-300 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-xs file:text-zinc-200"
               />
               <button
@@ -227,16 +223,20 @@ export default function ProjectReviewPanels({
                 disabled={isUploading}
                 className="shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isUploading ? "Preparando vídeo..." : "Enviar vídeo"}
+                {isUploading ? uploadProgress === 100 ? "Preparando vídeo..." : `Enviando ${uploadProgress}%` : "Enviar vídeo"}
               </button>
             </div>
             <p className="mt-2 text-xs text-zinc-400">MP4, MOV, WebM, M4V, MKV, AVI, MTS ou M2TS · até 250 MB</p>
+            <p className="mt-2 text-xs text-zinc-500">No link gratuito da Cloudflare, prefira arquivos de até 95 MB. Para maiores, envie pelo endereço local; a revisão continua disponível no link público.</p>
+            {videoFile && <p className="mt-2 break-all text-xs text-zinc-300">{videoFile.name} · {(videoFile.size / 1024 / 1024).toFixed(1)} MB</p>}
+            {isUploading && <progress aria-label="Progresso do envio do vídeo" value={uploadProgress} max={100} className="mt-3 h-2 w-full accent-emerald-400" />}
             <p role="status" className="mt-2 text-xs text-zinc-400">
               {isUploading
-                ? "Enviando e preparando para reprodução. Isso pode levar alguns minutos; mantenha esta página aberta."
+                ? uploadProgress === 100 ? "Arquivo transmitido. Aguardando o servidor preparar e confirmar a versão; mantenha esta página aberta." : "Enviando o arquivo. Mantenha esta página aberta até a confirmação."
                 : "O vídeo será convertido automaticamente para reprodução no navegador."}
             </p>
-            {uploadError && <p className="mt-2 text-xs text-red-300">{uploadError}</p>}
+            {uploadError && <p role="alert" className="mt-2 text-xs text-red-300">{uploadError}</p>}
+            {uploadSuccess && <p role="status" className="mt-2 text-xs text-emerald-300">{uploadSuccess}</p>}
           </div>
 
           {versions.map((videoVersion) => (

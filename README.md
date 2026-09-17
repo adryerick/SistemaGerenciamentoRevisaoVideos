@@ -12,6 +12,8 @@ um editor e seus clientes. Next.js 16, React 19, TypeScript, Tailwind, Prisma e 
 - Link de revisão sem cadastro de cliente, com ativação/desativação.
 - Comentários por versão, minutagem opcional, captura do instante do player e retorno ao trecho.
 - Solicitações pendentes, em andamento ou resolvidas; histórico público por versão.
+- Progresso de upload separado da conversão, confirmação de envio e preservação do arquivo em falhas.
+- Revisão responsiva com filtros de status e rascunhos locais separados por versão.
 - Progresso calculado pela proporção de solicitações resolvidas e métricas no dashboard.
 
 A conclusão do projeto é uma decisão manual do editor. Marcar o projeto como
@@ -84,6 +86,19 @@ manter a página aberta. O original no computador não é modificado.
 Não substitui o master, não faz tone mapping de HDR e não garante todos os codecs.
 Vídeos antigos que falhem podem ser reenviados como nova versão.
 
+O buffer do Next Proxy aceita 260 MB para comportar o limite de 250 MB do vídeo
+e o envelope multipart. Sem essa configuração, o Next corta o corpo em 10 MB.
+Isso não remove limites do provedor de compartilhamento: para o Quick Tunnel,
+prefira até 95 MB por envio. Arquivos maiores podem ser enviados por localhost;
+o cliente pode continuar usando a revisão pública. A Cloudflare documenta
+[100 MB por requisição nos planos Free/Pro](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/4xx-client-error/error-413/).
+
+Os rascunhos da revisão ficam apenas no navegador, separados pelo link e versão,
+e são removidos após um envio confirmado. Trocar a versão não transfere o texto
+para outro vídeo. Se o armazenamento estiver bloqueado, o rascunho é mantido
+somente enquanto a página estiver aberta. Em computador compartilhado, considere
+usar janela privada; comentários enviados são visíveis a quem possui o link.
+
 Se um vídeo funcionar no Chrome e falhar no Opera, teste ativar/desativar a
 aceleração gráfica nas configurações e reinicie o navegador. A aplicação não
 consegue alterar essa configuração. [Orientação oficial do Opera](https://help.opera.com/en/faq/).
@@ -101,8 +116,14 @@ consegue alterar essa configuração. [Orientação oficial do Opera](https://he
 - `npm run test:mvp -- --check-forms`: abre o servidor isolado para conferir login
   e cadastro de projeto pelo navegador, com conta e cliente de teste exibidos no
   terminal. Não envie vídeos nesse modo. Pressione Enter para encerrar e limpar o banco.
+- `npm run test:mvp -- --check-review --production`: compila produção e prepara
+  duas versões e comentários exclusivos de teste para conferência visual da revisão.
+  Pressione Enter para apagar apenas os vídeos e banco isolados.
+- `npm run test:mvp -- --production`: executa a suíte integrada na compilação de produção.
 
 O teste de conversão inclui H.264, HEVC de 10 bits, WebM/VP9 e ProRes sem áudio.
+O teste integrado envia um MP4 válido acima de 10 MB para impedir a regressão
+de truncamento do corpo pelo Proxy.
 O vídeo propositalmente inválido gera um log de erro esperado.
 Os testes integrados também verificam seleção de cliente por ID, nomes de clientes
 duplicados e recuperação de acesso com invalidação das sessões e do código utilizado.
