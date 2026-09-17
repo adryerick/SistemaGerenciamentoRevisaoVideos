@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
     if (pathname.startsWith("/api/") || pathname.startsWith("/uploads/")) {
       return NextResponse.json({ error: "Entre na sua conta para continuar." }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", publicOrigin(request.url)));
   }
   const response = NextResponse.next();
   response.headers.set("Cache-Control", "private, no-store");

@@ -114,8 +114,32 @@ o link e confirme que novos acessos são negados.
 
 ## Publicação e limites
 
-O MVP local está implementado, mas **não foi publicado na internet**. Links com
-localhost só funcionam no computador que executa o servidor. Nenhum serviço pago
+### Compartilhamento gratuito com Cloudflare Quick Tunnel
+
+Para uma apresentação do MVP, execute `npm run share` na pasta do projeto.
+O comando compila a versão de produção em `.next-public`, inicia o servidor
+na porta local 3001 e abre um endereço HTTPS temporário da Cloudflare.
+O acesso deve estar configurado antes de executar o comando.
+
+O cliente oficial `cloudflared` precisa estar em `.local/cloudflared.exe`
+no Windows; para outro local, defina `CLOUDFLARED_PATH`. Baixe pela
+[página oficial](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/).
+O executável, os dados e o endereço atual não são enviados ao GitHub.
+
+Abra o **endereço público** exibido no terminal, entre na sua conta e copie os
+links de revisão por essa página. Links copiados em localhost continuam locais.
+Clientes e vídeos permanecem no computador. O site só funciona enquanto o PC,
+a internet e os processos estiverem ativos; Ctrl+C encerra o compartilhamento.
+Ao executar novamente, o endereço muda e os links públicos devem ser atualizados.
+O servidor de desenvolvimento da porta 3000 pode continuar sendo usado localmente.
+
+Não foi contratado plano pago. O Quick Tunnel é destinado a testes e não tem
+garantia de disponibilidade. Consulte as
+[limitações oficiais](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/).
+
+O MVP pode ser disponibilizado temporariamente pelo Quick Tunnel acima, mas
+**não possui hospedagem permanente**. Links com localhost só funcionam no
+computador que executa o servidor. Nenhum serviço pago
 foi contratado e nenhuma conta externa foi criada.
 
 Para publicar: escolher hospedagem Node com HTTPS e disco persistente, configurar

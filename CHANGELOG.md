@@ -1,5 +1,13 @@
 # Histórico de entregas
 
+## 2026-09-17 — Compartilhamento gratuito do MVP
+
+- Comando `npm run share` compila uma versão de produção separada, inicia na porta 3001 e gera um link HTTPS com Cloudflare Quick Tunnel.
+- Domínio temporário configurado automaticamente para login, cookies e validação de origem; redirecionamentos usam o endereço público.
+- Encerramento limitado aos processos criados pelo comando; mantém o desenvolvimento local na porta 3000.
+- Documentação de uso, endereço temporário e necessidade de manter o computador ligado. Nenhum plano de hospedagem pago foi contratado.
+- Conferência pelo endereço público: login e health check HTTP 200, API privada sem sessão HTTP 401 e envio de origem externa HTTP 403. Build e lint aprovados.
+
 ## 2026-09-17 — Diagnóstico de login e preparação da hospedagem
 
 - Login verifica a sessão recebida pelo navegador antes de entrar no dashboard; diferencia bloqueio de cookies de credenciais recusadas e faz navegação completa após o sucesso.
