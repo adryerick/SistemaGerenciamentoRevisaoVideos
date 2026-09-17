@@ -5,6 +5,7 @@ import NewProjectModal from "../components/NewProjectModal";
 import ProjectCard from "../components/ProjectCard";
 import Sidebar from "../components/Sidebar";
 import type { Client, Project } from "../types";
+import type { NewProjectInput } from "../lib/project-input";
 
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -54,25 +55,21 @@ export default function Projects() {
     void loadData();
   }, []);
 
-  async function handleCreateProject(project: Omit<Project, "id">) {
-    try {
-      const response = await fetch("/api/projetos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(project),
-      });
-      const result = await response.json();
+  async function handleCreateProject(project: NewProjectInput) {
+    const response = await fetch("/api/projetos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(project),
+    }).catch(() => {
+      throw new Error("Falha de conexão. Confira se o servidor está em execução e tente novamente.");
+    });
+    const result = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        alert(result.error ?? "Não foi possível criar o projeto.");
-        return;
-      }
-
-      setProjects((currentProjects) => [result, ...currentProjects]);
-      setShowModal(false);
-    } catch {
-      alert("Não foi possível conectar ao banco de dados.");
+    if (!response.ok) {
+      throw new Error(response.status === 401 ? "Sua sessão expirou. Entre novamente; o projeto ainda não foi criado." : result.error ?? "Não foi possível criar o projeto.");
     }
+
+    setProjects((currentProjects) => [result, ...currentProjects]);
   }
 
   async function handleDeleteProject(project: Project) {
@@ -189,12 +186,12 @@ export default function Projects() {
 
           </div>
 
-          <NewProjectModal
+          {showModal && <NewProjectModal
             isOpen={showModal}
             clients={clients}
             onClose={() => setShowModal(false)}
             onCreate={handleCreateProject}
-          />
+          />}
 
         </section>
 

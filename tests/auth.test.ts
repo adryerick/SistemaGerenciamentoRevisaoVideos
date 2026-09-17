@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createSession, hashPassword, SESSION_SECONDS, verifyPassword, verifySession } from "../app/lib/auth-core";
+import { fingerprint, validRecovery, type RecoveryGrant } from "../app/lib/auth-recovery";
+
+test("recovery rejects expired, malformed, reused and unrelated grants", () => {
+  const token = "a".repeat(64);
+  const config = { editorId: 4, email: "test@example.test", passwordHash: "not-used", secret: "test-only-secret" };
+  const grant = { tokenHash: fingerprint(token), secretHash: fingerprint(config.secret), expiresAt: 2000 };
+  assert.equal(validRecovery(token, grant, config, 1000), true);
+  assert.equal(validRecovery(token, grant, config, 2000), false);
+  assert.equal(validRecovery("b".repeat(64), grant, config, 1000), false);
+  assert.equal(validRecovery(token, grant, { ...config, secret: "rotated" }, 1000), false);
+  assert.equal(validRecovery(token, {} as RecoveryGrant, config, 1000), false);
+  assert.equal(validRecovery(token, { expiresAt: 2000 } as RecoveryGrant, config, 1000), false);
+  assert.equal(validRecovery(token, null, config, 1000), false);
+});
 
 test("password hashes use independent salts and verify correct password only", async () => {
   const hash = await hashPassword("Example-test-password");

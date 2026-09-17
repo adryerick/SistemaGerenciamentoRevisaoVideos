@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "auth:prepare": "tsx scripts/prepare-auth.ts",
+    "auth:recover": "tsx scripts/prepare-recovery.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:mvp": "tsx scripts/check-mvp.ts",
     "test:video": "tsx --test tests/video-compatibility.test.ts"

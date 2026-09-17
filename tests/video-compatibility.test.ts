@@ -73,6 +73,7 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
     if (base) {
       await t.test("real upload and public playback: HEVC, seeking, errors and disabled links", { timeout: 120000 }, async () => {
         let clientId: number | undefined;
+        let duplicateClientId: number | undefined;
         let projectId: number | undefined;
         try {
           const clientResponse = await editorFetch(`${base}/api/clients`, {
@@ -82,9 +83,23 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           assert.equal(clientResponse.status, 201);
           const client = await clientResponse.json();
           clientId = client.id;
+          const duplicateResponse = await editorFetch(`${base}/api/clients`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: client.name, email: `duplicate-${Date.now()}@example.test` }),
+          });
+          assert.equal(duplicateResponse.status, 201);
+          duplicateClientId = (await duplicateResponse.json()).id;
+          const createProject = (body: unknown) => editorFetch(`${base}/api/projetos`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+          });
+          assert.equal((await createProject({ name: "Ambiguous client", client: client.name })).status, 409);
+          assert.equal((await createProject({ name: "Missing client" })).status, 400);
+          assert.equal((await createProject({ name: "   ", clientId })).status, 400);
+          assert.equal((await createProject({ name: "Invalid client", clientId: -1 })).status, 400);
+          assert.equal((await createProject({ name: "Missing client", clientId: 2147483647 })).status, 404);
           const projectResponse = await editorFetch(`${base}/api/projetos`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: "Temporary compatibility test", client: client.name }),
+            body: JSON.stringify({ name: "Temporary compatibility test", clientId: client.id }),
           });
           assert.equal(projectResponse.status, 201);
           const project = await projectResponse.json();
@@ -153,6 +168,7 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
         } finally {
           if (projectId) assert.equal((await editorFetch(`${base}/api/projetos/${projectId}`, { method: "DELETE" })).status, 200);
           if (clientId) assert.equal((await editorFetch(`${base}/api/clients/${clientId}`, { method: "DELETE" })).status, 200);
+          if (duplicateClientId) assert.equal((await editorFetch(`${base}/api/clients/${duplicateClientId}`, { method: "DELETE" })).status, 200);
         }
       });
     }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { randomBytes, randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import { access, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -28,7 +28,8 @@ async function main() {
   assert.equal((database.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'Project'").get() as { seq: number }).seq, testProjectId - 1);
   database.close();
   const port = 3107;
-  const base = `http://localhost:${port}`;
+  // A separate hostname keeps browser test cookies apart from localhost:3000.
+  const base = `http://127.0.0.1:${port}`;
   const env = { ...process.env, DATABASE_URL: `file:${databaseFile}`, VIDEOREVIEW_AUTH_DIR: authDir, NEXT_DIST_DIR: ".next-test", NEXT_TELEMETRY_DISABLED: "1" };
   let logs = "";
   const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--port", String(port)], { cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -50,10 +51,49 @@ async function main() {
     const cookie = login.headers.get("set-cookie")?.split(";")[0];
     assert.ok(cookie);
     assert.match(login.headers.get("set-cookie")!, /HttpOnly/i);
+    if (process.argv.includes("--check-forms")) {
+      assert.ok(process.stdin.isTTY, "Use --check-forms em um terminal interativo.");
+      const fixture = await fetch(`${base}/api/clients`, { method: "POST", headers: { Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ name: "Cliente de teste do formulário", email: "forms@example.test" }) });
+      assert.equal(fixture.status, 201);
+      console.log(`Conferência de formulários em ${base}. Conta APENAS de teste: mvp@example.test / MVP-test-password-2026`);
+      console.log("Teste login e cadastro de projeto (sem uploads). Pressione Enter neste terminal para encerrar e remover o banco temporário.");
+      await new Promise<void>((resolve) => { process.stdin.resume(); process.stdin.once("data", () => { process.stdin.pause(); resolve(); }); });
+      return;
+    }
     const testFiles = (await readdir(path.join(root, "tests"))).filter((file) => file.endsWith(".test.ts")).map((file) => `tests/${file}`);
     const testProcess = spawn(process.execPath, ["--import", "tsx", "--test", ...testFiles], { cwd: root, env: { ...env, VIDEO_TEST_BASE_URL: base, VIDEO_TEST_COOKIE: cookie, VIDEO_TEST_PROJECT_ID: String(testProjectId) }, windowsHide: true, stdio: "inherit" });
     const exitCode = await new Promise<number>((resolve, reject) => { testProcess.on("error", reject); testProcess.on("exit", (code) => resolve(code ?? 1)); });
     if (exitCode) { console.error(logs); process.exitCode = exitCode; }
+    else {
+      // Run last: recovery rotates this isolated editor's secret, invalidating
+      // the cookie used by the concurrent API tests above. Never use real auth.
+      const originalAuth = JSON.parse(await readFile(path.join(authDir, "auth.json"), "utf8"));
+      const recoveryToken = randomBytes(32).toString("hex");
+      const fingerprint = (value: string) => createHash("sha256").update(value).digest("hex");
+      await writeFile(path.join(authDir, "recovery.json"), JSON.stringify({ tokenHash: fingerprint(recoveryToken), secretHash: fingerprint(originalAuth.secret), expiresAt: Date.now() + 60000 }));
+      const recover = (token: string, confirmPassword = "Recovered-test-password-2026") => fetch(`${base}/api/auth/recover`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, email: "recovered@example.test", password: "Recovered-test-password-2026", confirmPassword }),
+      });
+      assert.equal((await recover(recoveryToken, "mismatch")).status, 400);
+      assert.equal((await recover("f".repeat(64))).status, 403);
+      const recovered = await recover(recoveryToken);
+      assert.equal(recovered.status, 200, await recovered.clone().text());
+      const newCookie = recovered.headers.get("set-cookie")?.split(";")[0];
+      assert.ok(newCookie);
+      assert.equal((await recover(recoveryToken)).status, 403);
+      assert.equal((await fetch(`${base}/api/projetos`, { headers: { Cookie: cookie } })).status, 401);
+      assert.equal((await fetch(`${base}/api/projetos`, { headers: { Cookie: newCookie } })).status, 200);
+      const newAuth = JSON.parse(await readFile(path.join(authDir, "auth.json"), "utf8"));
+      assert.equal(newAuth.editorId, originalAuth.editorId);
+      assert.notEqual(newAuth.secret, originalAuth.secret);
+      const tryLogin = (email: string, password: string) => fetch(`${base}/api/auth/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }),
+      });
+      assert.equal((await tryLogin("mvp@example.test", "MVP-test-password-2026")).status, 401);
+      assert.equal((await tryLogin("recovered@example.test", "Recovered-test-password-2026")).status, 200);
+      console.log("✔ Recuperação local: troca de acesso, uso único, sessões antigas invalidadas e ID preservado.");
+    }
   } finally {
     if (server.exitCode === null) {
       // Windows Next dev launches a child; stop only the process tree we created.

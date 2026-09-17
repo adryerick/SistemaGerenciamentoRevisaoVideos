@@ -1,5 +1,14 @@
 # Histórico de entregas
 
+## 2026-09-17 — Correções de cadastro e recuperação de acesso
+
+- Corrigido o formulário que exibia um cliente selecionado, mas enviava o nome vazio após o carregamento da página.
+- Vínculo de projetos por ID do cliente, com nome e e-mail no seletor para distinguir cadastros de mesmo nome.
+- Formulário aguarda o servidor, mantém os campos em caso de falha e impede envios durante o salvamento.
+- Recuperação local por link secreto de uso único com validade de 30 minutos; preserva o editor e seus dados, rotaciona a senha e invalida as sessões anteriores.
+- Testes de regressão para cadastro, seleção de cliente, recuperação, token inválido e revogação de sessões; modo isolado de conferência visual dos formulários.
+- Validação: 20 testes aprovados, checagem integrada adicional de recuperação, lint e build de produção. No navegador: login, criação com cliente pré-selecionado e preservação dos campos após falha de conexão.
+
 ## 2026-09-16 — Fechamento funcional do MVP local
 
 - Login real para um editor por instalação, configuração inicial protegida por código local, senha com scrypt, cookie assinado, expiração e logout.

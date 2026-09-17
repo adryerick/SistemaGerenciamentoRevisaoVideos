@@ -5,7 +5,7 @@ um editor e seus clientes. Next.js 16, React 19, TypeScript, Tailwind, Prisma e 
 
 ## Funcionalidades
 
-- Login real do editor, sessão de 8 horas e saída da conta.
+- Login real do editor, sessão de 8 horas, saída da conta e recuperação local de acesso.
 - Cadastro, consulta, edição e exclusão de clientes sem projetos vinculados.
 - Criação, pesquisa, edição de nome/descrição/status e exclusão de projetos.
 - Upload, conversão, reprodução, histórico e exclusão de versões.
@@ -56,6 +56,16 @@ Faça backup conjunto de `prisma/dev.db`, `public/uploads` e `.local`, com o
 servidor parado. O banco, os vídeos e os segredos não são versionados.
 Excluir projetos/versões remove os respectivos registros e arquivos, sem lixeira.
 
+### Esqueci meu acesso
+
+No terminal, na pasta do projeto, execute `npm run auth:recover`. Abra o link
+gerado, confira ou corrija seu e-mail e escolha uma nova senha com pelo menos
+12 caracteres. O link é secreto, dura 30 minutos e pode ser usado uma única vez.
+Gerar o link não altera a senha; confirmar o formulário troca as credenciais e
+invalida todas as sessões anteriores. Clientes, projetos e vídeos são preservados.
+Cada novo link substitui o anterior. É necessário acesso ao computador/servidor:
+não há envio de recuperação por e-mail. Não publique links ou arquivos de recuperação.
+
 As URLs diretas de uploads exigem sessão do editor. O cliente recebe o vídeo
 pela API que verifica o token e se o link está ativo. Desativar um link impede
 novas consultas e envios; não apaga cópias já baixadas ou o vídeo já carregado
@@ -88,9 +98,14 @@ consegue alterar essa configuração. [Orientação oficial do Opera](https://he
   credenciais exclusivos de teste. Verifica login, acesso negado, upload, revisão
   pública, comentários, edição, progresso e desativação. Reserva um ID de projeto
   sem pasta existente para os arquivos de teste; remove os próprios dados ao terminar.
+- `npm run test:mvp -- --check-forms`: abre o servidor isolado para conferir login
+  e cadastro de projeto pelo navegador, com conta e cliente de teste exibidos no
+  terminal. Não envie vídeos nesse modo. Pressione Enter para encerrar e limpar o banco.
 
 O teste de conversão inclui H.264, HEVC de 10 bits, WebM/VP9 e ProRes sem áudio.
 O vídeo propositalmente inválido gera um log de erro esperado.
+Os testes integrados também verificam seleção de cliente por ID, nomes de clientes
+duplicados e recuperação de acesso com invalidação das sessões e do código utilizado.
 
 Roteiro manual: cadastre cliente e projeto; envie um vídeo; abra o link em janela
 anônima; marque um instante e envie comentário; no painel altere o status; no
