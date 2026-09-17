@@ -41,6 +41,12 @@ test("protected routes deny anonymous users and login rejects invalid credential
   const base = process.env.VIDEO_TEST_BASE_URL!;
   assert.equal((await fetch(`${base}/api/projetos`)).status, 401);
   assert.equal((await fetch(`${base}/api/clients`)).status, 401);
+  assert.equal((await fetch(`${base}/api/auth/session`)).status, 401);
+  const session = await fetch(`${base}/api/auth/session`, { headers: { Cookie: process.env.VIDEO_TEST_COOKIE! } });
+  assert.equal(session.status, 200);
+  assert.deepEqual(await session.json(), { authenticated: true });
+  assert.match(session.headers.get("cache-control") ?? "", /no-store/);
+  assert.equal((await fetch(`${base}/health`)).status, 200);
   assert.equal((await fetch(`${base}/uploads/projects/1/nonexistent.mp4`)).status, 401);
   assert.equal((await fetch(`${base}/dashboard`, { redirect: "manual" })).status, 307);
   assert.equal((await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "test@example.test", password: "incorrect" }) })).status, 401);

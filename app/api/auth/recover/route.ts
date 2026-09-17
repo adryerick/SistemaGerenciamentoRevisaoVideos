@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AUTH_COOKIE, SESSION_SECONDS, createSession } from "../../../lib/auth-core";
 import { recoverAccount } from "../../../lib/auth-recovery";
+import { publicOrigin } from "../../../lib/public-origin";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
   const config = await recoverAccount(body.token, email, body.password);
   if (!config) return Response.json({ error: "Código inválido, expirado ou já utilizado. Gere outro com npm run auth:recover." }, { status: 403 });
   const response = NextResponse.json({ success: true });
-  response.cookies.set(AUTH_COOKIE, createSession(config), { httpOnly: true, sameSite: "lax", secure: new URL(request.url).protocol === "https:", maxAge: SESSION_SECONDS, path: "/" });
+  response.cookies.set(AUTH_COOKIE, createSession(config), { httpOnly: true, sameSite: "lax", secure: publicOrigin(request.url).startsWith("https:"), maxAge: SESSION_SECONDS, path: "/" });
   response.headers.set("Cache-Control", "no-store");
   return response;
 }

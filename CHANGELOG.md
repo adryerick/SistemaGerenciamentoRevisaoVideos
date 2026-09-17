@@ -1,5 +1,14 @@
 # Histórico de entregas
 
+## 2026-09-17 — Diagnóstico de login e preparação da hospedagem
+
+- Login verifica a sessão recebida pelo navegador antes de entrar no dashboard; diferencia bloqueio de cookies de credenciais recusadas e faz navegação completa após o sucesso.
+- Opção Mostrar senha e identificação estável dos campos para conferir preenchimento automático.
+- Docker Linux com FFmpeg, migrations na inicialização, execução do servidor como usuário node e armazenamento persistente para SQLite, autenticação e vídeos.
+- Blueprint do Render com disco de 5 GB, verificação `/health` e deploys automáticos desligados.
+- Domínio público configurável para cookies HTTPS, links de configuração/recuperação e validação de origem atrás do proxy da hospedagem.
+- Publicação ainda depende de conta conectada, aprovação do custo e conferência do primeiro deploy. O acesso no Opera depende de validação pelo usuário com as credenciais atuais.
+
 ## 2026-09-17 — Correções de cadastro e recuperação de acesso
 
 - Corrigido o formulário que exibia um cliente selecionado, mas enviava o nome vazio após o carregamento da página.

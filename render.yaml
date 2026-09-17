@@ -1,0 +1,19 @@
+# Recursos pagos: confirme o preço no Render antes de criar o Blueprint.
+services:
+  - type: web
+    name: videoreview
+    runtime: docker
+    repo: https://github.com/adryerick/SistemaGerenciamentoRevisaoVideos
+    branch: master
+    plan: 0.5c-512mb
+    autoDeployTrigger: off
+    healthCheckPath: /health
+    disk:
+      name: videoreview-data
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: DATABASE_URL
+        value: file:/var/data/dev.db
+      - key: VIDEOREVIEW_AUTH_DIR
+        value: /var/data/auth

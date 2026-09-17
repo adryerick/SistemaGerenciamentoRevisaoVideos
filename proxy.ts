@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, readAuthConfig, verifySession } from "./app/lib/auth-core";
+import { publicOrigin } from "./app/lib/public-origin";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const mutation = !["GET", "HEAD", "OPTIONS"].includes(request.method);
   const origin = request.headers.get("origin");
-  if (mutation && (request.headers.get("sec-fetch-site") === "cross-site" || (origin && origin !== request.nextUrl.origin))) {
+  if (mutation && (request.headers.get("sec-fetch-site") === "cross-site" || (origin && origin !== publicOrigin(request.url)))) {
     return NextResponse.json({ error: "Origem da solicitação não permitida." }, { status: 403 });
   }
   const publicRoute = pathname.startsWith("/api/revisao/") || pathname.startsWith("/api/auth/");

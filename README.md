@@ -125,3 +125,37 @@ Ambientes serverless de curta duração exigem armazenamento e fila de conversã
 externos; não basta enviar esta instalação para uma função serverless.
 
 Veja [CHANGELOG.md](CHANGELOG.md) para as entregas e limitações conhecidas.
+
+### Implantação preparada no Render
+
+O repositório contém `Dockerfile` e `render.yaml`. A implantação usa um servidor
+Node Linux com FFmpeg, executa as migrations antes de iniciar e mantém banco,
+credenciais e vídeos no disco `/var/data`. `/health` verifica a conexão com o banco.
+Nenhum dado local, senha ou vídeo é incluído na imagem Docker.
+
+1. Crie uma conta no Render e conecte o GitHub.
+2. Em New > Blueprint, selecione este repositório e a branch `master`.
+3. Confira os recursos pagos antes de criar: `0.5c-512mb` e disco de 5 GB.
+   Preço base verificado em 17/09/2026: US$ 7 + US$ 1,25/mês, antes de impostos,
+   tráfego excedente e outros recursos. Esse plano inicial exige verificar os
+   vídeos de teste: conversões e uploads grandes podem exceder os 512 MB de RAM.
+4. Aguarde o deploy e o health check. O Render gera o domínio HTTPS.
+5. No Shell do serviço, como usuário `node` (`gosu node npm run auth:prepare`
+   se o Shell iniciar como root), execute `npm run auth:prepare` e abra o link
+   secreto exibido para configurar o acesso. A senha deve ser escolhida pelo editor.
+6. Confira login, criação de cliente/projeto, upload e revisão pelo link público.
+
+`RENDER_EXTERNAL_URL` é usado para links e validação de origem HTTPS. Para outro
+provedor ou domínio próprio, defina `APP_URL` com a origem pública exata.
+Os deploys automáticos estão desligados para evitar atualizações sem conferência.
+
+A instalação online começa com uma base vazia. Para migrar os testes locais,
+pare os servidores, faça backup e transfira por canal privado o banco para
+`/var/data/dev.db`, `.local` para `/var/data/auth` e os uploads para
+`/var/data/uploads`, preservando IDs e permissões do usuário `node`.
+Não envie os arquivos de autenticação ao GitHub. A imagem precisa de build no
+Docker/Render; a compilação local do Next não valida sozinha o contêiner Linux.
+
+Fontes: [Docker](https://render.com/docs/docker),
+[discos persistentes](https://render.com/docs/disks) e
+[preços](https://render.com/pricing).

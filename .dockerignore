@@ -1,0 +1,10 @@
+node_modules
+.git
+.next*
+.local
+.env*
+prisma/*.db*
+public/uploads
+app/generated/prisma
+*.tsbuildinfo
+npm-debug.log*

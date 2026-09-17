@@ -13,6 +13,7 @@ async function main() {
   try { await writeFile(tokenFile, randomBytes(32).toString("hex"), { flag: "wx", mode: 0o600 }); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
   const token = (await readFile(tokenFile, "utf8")).trim();
-  console.log(`Configure sua conta neste link local e não o compartilhe:\nhttp://localhost:3000/configurar?token=${token}`);
+  const origin = process.env.APP_URL ?? process.env.RENDER_EXTERNAL_URL ?? "http://localhost:3000";
+  console.log(`Configure sua conta neste link e não o compartilhe:\n${new URL(`/configurar?token=${token}`, origin)}`);
 }
 main().catch(() => { console.error("Não foi possível preparar a configuração local."); process.exitCode = 1; });

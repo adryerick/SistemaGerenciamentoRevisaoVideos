@@ -4,6 +4,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { AUTH_COOKIE, SESSION_SECONDS, authDirectory, authFile, createSession, hashPassword, readAuthConfig, safeEqual } from "../../../lib/auth-core";
 import { prisma } from "../../../lib/prisma";
+import { publicOrigin } from "../../../lib/public-origin";
 
 export async function POST(request: Request) {
   if (await readAuthConfig()) return Response.json({ error: "A conta já foi configurada." }, { status: 409 });
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     await prisma.editor.update({ where: { id: editor.id }, data: { name } });
     await rm(path.join(authDirectory, "setup-token"), { force: true });
     const response = NextResponse.json({ success: true });
-    response.cookies.set(AUTH_COOKIE, createSession(config), { httpOnly: true, sameSite: "lax", secure: new URL(request.url).protocol === "https:", maxAge: SESSION_SECONDS, path: "/" });
+    response.cookies.set(AUTH_COOKIE, createSession(config), { httpOnly: true, sameSite: "lax", secure: publicOrigin(request.url).startsWith("https:"), maxAge: SESSION_SECONDS, path: "/" });
     return response;
   } finally { await lock.close(); await rm(lockFile, { force: true }); }
 }

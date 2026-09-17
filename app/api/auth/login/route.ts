@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AUTH_COOKIE, SESSION_SECONDS, createSession, readAuthConfig, verifyPassword } from "../../../lib/auth-core";
+import { publicOrigin } from "../../../lib/public-origin";
 
 // Single-process local MVP. Public deployment needs a shared rate limiter.
 let attempts = 0;
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   if (!passwordValid || body.email.trim().toLowerCase() !== config.email) return Response.json({ error: "E-mail ou senha inválidos." }, { status: 401 });
   attempts = 0;
   const response = NextResponse.json({ success: true });
-  response.cookies.set(AUTH_COOKIE, createSession(config), { httpOnly: true, sameSite: "lax", secure: new URL(request.url).protocol === "https:", maxAge: SESSION_SECONDS, path: "/" });
+  response.cookies.set(AUTH_COOKIE, createSession(config), { httpOnly: true, sameSite: "lax", secure: publicOrigin(request.url).startsWith("https:"), maxAge: SESSION_SECONDS, path: "/" });
   response.headers.set("Cache-Control", "no-store");
   return response;
 }
