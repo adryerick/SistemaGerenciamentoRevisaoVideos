@@ -12,13 +12,19 @@ um editor e seus clientes. Next.js 16, React 19, TypeScript, Tailwind, Prisma e 
 - Link de revisão sem cadastro de cliente, com ativação/desativação.
 - Comentários por versão, minutagem opcional, captura do instante do player e retorno ao trecho.
 - Solicitações pendentes, em andamento ou resolvidas; histórico público por versão.
+- Conversas por solicitação, com respostas identificadas como editor ou cliente.
+- Aprovação da última versão pelo cliente, bloqueada enquanto houver ajustes em aberto nessa versão.
+- Marcações clicáveis dos comentários na linha do tempo; nome opcional de quem revisa.
 - Progresso de upload separado da conversão, confirmação de envio e preservação do arquivo em falhas.
 - Revisão responsiva com filtros de status e rascunhos locais separados por versão.
 - Progresso calculado pela proporção de solicitações resolvidas e métricas no dashboard.
 
 A conclusão do projeto é uma decisão manual do editor. Marcar o projeto como
 Resolvido não altera automaticamente as solicitações, nem significa aprovação
-formal do cliente. Não há fluxo de aprovação eletrônica no escopo atual.
+do cliente. A aprovação é registrada separadamente por versão: um novo upload não
+herda a aprovação anterior. Novos ajustes ou solicitações reabertas devolvem a
+versão ao estado de ajustes solicitados. Quem possui o link ativo pode comentar,
+responder e aprovar; o nome informado não é verificado e não constitui assinatura digital.
 
 ## Executar localmente
 
@@ -111,7 +117,7 @@ consegue alterar essa configuração. [Orientação oficial do Opera](https://he
 - `npm test`: validações, sessões, minutagem, progresso e conversões.
 - `npm run test:mvp`: sobe servidor temporário na porta 3107 e usa SQLite e
   credenciais exclusivos de teste. Verifica login, acesso negado, upload, revisão
-  pública, comentários, edição, progresso e desativação. Reserva um ID de projeto
+pública, comentários, edição, progresso e desativação. Reserva um ID de projeto
   sem pasta existente para os arquivos de teste; remove os próprios dados ao terminar.
 - `npm run test:mvp -- --check-forms`: abre o servidor isolado para conferir login
   e cadastro de projeto pelo navegador, com conta e cliente de teste exibidos no
@@ -127,6 +133,8 @@ de truncamento do corpo pelo Proxy.
 O vídeo propositalmente inválido gera um log de erro esperado.
 Os testes integrados também verificam seleção de cliente por ID, nomes de clientes
 duplicados e recuperação de acesso com invalidação das sessões e do código utilizado.
+Verificam também respostas, proteção contra impersonação do editor, aprovação por
+versão, bloqueio com ajustes pendentes e reabertura após aprovação.
 
 Roteiro manual: cadastre cliente e projeto; envie um vídeo; abra o link em janela
 anônima; marque um instante e envie comentário; no painel altere o status; no

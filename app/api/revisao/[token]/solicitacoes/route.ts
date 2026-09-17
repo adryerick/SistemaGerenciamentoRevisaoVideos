@@ -1,13 +1,17 @@
 import { toChangeRequestDto } from "../../../../lib/presenters";
 import { prisma } from "../../../../lib/prisma";
 import { validateReviewInput } from "../../../../lib/review-feedback";
+import { validateReviewerName } from "../../../../lib/review-collaboration";
 
 export async function POST(
   request: Request,
   { params }: RouteContext<"/api/revisao/[token]/solicitacoes">,
 ) {
   const { token } = await params;
-  const input = validateReviewInput(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  const name = validateReviewerName(body?.authorName);
+  if ("error" in name) return Response.json(name, { status: 400 });
+  const input = validateReviewInput(body);
   if ("error" in input) return Response.json(input, { status: 400 });
   const { comment, timestamp, videoVersionId } = input;
 
@@ -29,14 +33,19 @@ export async function POST(
     return Response.json({ error: "Versão de vídeo não encontrada." }, { status: 404 });
   }
 
-  const changeRequest = await prisma.changeRequest.create({
+  const changeRequest = await prisma.$transaction(async (tx) => {
+    const created = await tx.changeRequest.create({
     data: {
       comment,
+      authorName: name.name,
       timestamp: timestamp || null,
       projectId: project.id,
       videoVersionId,
       clientId: project.clientId,
     },
+    });
+    await tx.reviewDecision.create({ data: { videoVersionId, status: "Ajustes solicitados", authorName: name.name } });
+    return created;
   });
 
   return Response.json(toChangeRequestDto(changeRequest), { status: 201 });

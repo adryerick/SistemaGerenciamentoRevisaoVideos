@@ -8,6 +8,8 @@ import { seekToTimestamp } from "../lib/video-navigation";
 import { VIDEO_ACCEPT, validateVideoFile } from "../lib/video-formats";
 import type { ChangeRequest, VideoVersion } from "../types";
 import { uploadVideo } from "../lib/upload-video";
+import ReviewThread from "./ReviewThread";
+import VersionReviewStatus from "./VersionReviewStatus";
 
 type ProjectReviewPanelsProps = {
   projectId: number;
@@ -264,8 +266,10 @@ export default function ProjectReviewPanels({
               </span>
             </div>
               <p className="mt-3 text-sm text-zinc-300">{videoVersion.fileName}</p>
+              <VersionReviewStatus version={videoVersion} />
               {videoVersion.videoUrl ? (
                 <VideoPlayer key={videoVersion.videoUrl} src={videoVersion.videoUrl}
+                  requests={requests.filter((request) => request.videoVersionId === videoVersion.id)}
                   videoRef={(element) => {
                     if (element) players.current.set(videoVersion.id, element);
                     else players.current.delete(videoVersion.id);
@@ -398,9 +402,11 @@ export default function ProjectReviewPanels({
                   </div>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm text-zinc-300">{request.comment}</p>
+                {request.authorName && <p className="mt-2 text-xs text-zinc-400">Nome informado: {request.authorName}</p>}
                 <p className="mt-2 text-xs text-zinc-600">
                   V{String(versions.find((version) => version.id === request.videoVersionId)?.number ?? "?").padStart(2, "0")} · Registrada em {request.createdAt}
                 </p>
+                <ReviewThread request={request} />
               </div>
             ))
           ) : (

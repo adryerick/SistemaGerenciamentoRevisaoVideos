@@ -24,6 +24,9 @@ export type VideoVersion = {
   sentAt: string;
   fileName: string;
   videoUrl?: string;
+  reviewStatus?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
 };
 
 export type ChangeRequest = {
@@ -34,4 +37,8 @@ export type ChangeRequest = {
   status: "Pendente" | "Em andamento" | "Resolvido";
   createdAt: string;
   videoVersionId: number;
+  authorName?: string;
+  replies?: ReviewReply[];
 };
+
+export type ReviewReply = { id: number; comment: string; role: string; authorName?: string; createdAt: string };

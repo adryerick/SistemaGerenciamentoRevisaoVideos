@@ -7,6 +7,8 @@ import { formatTimestamp, parseTimestamp, validateReviewInput } from "../lib/rev
 import { seekToTimestamp } from "../lib/video-navigation";
 import VideoPlayer from "./VideoPlayer";
 import { useReviewDraft } from "../lib/use-review-draft";
+import ReviewThread from "./ReviewThread";
+import VersionReviewStatus from "./VersionReviewStatus";
 
 type PublicReviewFormProps = {
   reviewToken: string;
@@ -25,11 +27,29 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
   const [success, setSuccess] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [authorName, setAuthorName] = useState("");
+  const [decisionError, setDecisionError] = useState("");
+  const [decisionSuccess, setDecisionSuccess] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
   const requests = changeRequests.filter((request) => request.videoVersionId === selected?.id);
   const visibleRequests = requests.filter((request) => filter === "Todas" || request.status === filter);
   const resolvedCount = requests.filter((request) => request.status === "Resolvido").length;
+  const pendingCount = requests.length - resolvedCount;
+
+  async function approve() {
+    if (!selected || sending) return;
+    if (comment.trim()) { setDecisionError("Envie ou remova seu rascunho de ajuste antes de aprovar."); return; }
+    if (!window.confirm(`Aprovar a versão V${String(selected.number).padStart(2, "0")}? A decisão será visível ao editor e a quem possui este link.`)) return;
+    setSending(true); setDecisionError(""); setDecisionSuccess("");
+    try {
+      const response = await fetch(`/api/revisao/${reviewToken}/aprovacao`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videoVersionId: selected.id, authorName }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) { setDecisionError(result.error ?? "Não foi possível aprovar. Tente novamente."); refresh(); return; }
+      setDecisionSuccess("Aprovação registrada para esta versão. Obrigado!"); refresh();
+    } catch { setDecisionError("Falha de conexão. A aprovação não foi confirmada; atualize antes de tentar novamente."); }
+    finally { setSending(false); }
+  }
 
   function refresh() {
     startTransition(() => router.refresh());
@@ -47,7 +67,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
       const response = await fetch(`/api/revisao/${reviewToken}/solicitacoes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, authorName }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) { setError(result.error ?? "Não foi possível enviar a solicitação."); return; }
@@ -67,18 +87,36 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
         <h2 className="text-lg font-semibold">Revisar vídeo</h2>
         <label htmlFor="review-version" className="mt-4 block text-sm text-zinc-400">Versão em revisão</label>
         <select id="review-version" value={selected.id} disabled={sending}
-          onChange={(event) => { setVideoVersionId(Number(event.target.value)); setSuccess(false); setError(""); }}
+          onChange={(event) => { setVideoVersionId(Number(event.target.value)); setSuccess(false); setError(""); setDecisionError(""); setDecisionSuccess(""); }}
           className="mt-2 w-full rounded-lg border border-[#303035] bg-[#111113] p-3 text-sm">
           {videoVersions.map((version, index) => <option key={version.id} value={version.id}>V{String(version.number).padStart(2, "0")} · {version.fileName}{index === 0 ? " (mais recente)" : ""}</option>)}
         </select>
         <p className="mt-2 text-xs text-zinc-400">Enviada em {selected.sentAt}. Os comentários abaixo pertencem a esta versão.</p>
+        <VersionReviewStatus version={selected} />
         {selected.videoUrl ? <VideoPlayer key={selected.id} videoRef={(element) => { videoRef.current = element; }}
           src={`/api/revisao/${reviewToken}/videos/${selected.id}`}
+          requests={requests}
           onMarkTime={sending ? undefined : (seconds) => {
             draft.update({ timestamp: formatTimestamp(seconds) });
             commentRef.current?.focus();
             commentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
           }} /> : <p className="mt-4 text-sm text-zinc-400">Arquivo de vídeo ainda não enviado.</p>}
+        <div className="mt-5 border-t border-zinc-800 pt-4">
+          <label className="block text-sm text-zinc-300">Seu nome (opcional)
+            <input value={authorName} disabled={sending} maxLength={80} onChange={(event) => setAuthorName(event.target.value)} placeholder="Como o editor pode identificar você"
+              className="mt-2 w-full rounded-lg border border-zinc-700 bg-[#111113] p-3 text-sm" />
+          </label>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button type="button" onClick={approve} disabled={sending || refreshing || !selected.videoUrl || selected.id !== videoVersions[0]?.id || pendingCount > 0 || selected.reviewStatus === "Aprovado"}
+              className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-medium text-black disabled:opacity-40">{selected.reviewStatus === "Aprovado" ? "Versão aprovada" : "Aprovar esta versão"}</button>
+            <button type="button" disabled={sending} onClick={() => { commentRef.current?.focus(); commentRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="rounded-lg border border-zinc-600 px-4 py-2 text-sm">Pedir ajustes</button>
+          </div>
+          {pendingCount > 0 && <p className="mt-2 text-xs text-amber-200">{pendingCount} ajuste(s) em aberto. Aguarde a resolução e clique em Atualizar status antes de aprovar.</p>}
+          {selected.id !== videoVersions[0]?.id && <p className="mt-2 text-xs text-amber-200">Esta versão é anterior. Para aprovar, selecione a mais recente.</p>}
+          <p className="mt-3 text-xs text-zinc-500">A decisão vale apenas para esta versão. Qualquer pessoa com o link pode revisar; o nome informado não é verificado e não constitui assinatura digital.</p>
+          {decisionError && <p role="alert" className="mt-3 text-sm text-red-300">{decisionError}</p>}
+          {decisionSuccess && <p role="status" className="mt-3 text-sm text-emerald-300">{decisionSuccess}</p>}
+        </div>
       </section>
 
       <form onSubmit={submitFeedback} className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
@@ -125,7 +163,9 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
               <span className={request.status === "Resolvido" ? "text-emerald-300" : "text-amber-200"}>{request.status}</span>
             </div>
             <p className="mt-3 whitespace-pre-wrap break-words text-sm text-zinc-200">{request.comment}</p>
+            {request.authorName && <p className="mt-2 text-xs text-zinc-400">Nome informado: {request.authorName}</p>}
             <p className="mt-2 text-xs text-zinc-500">Registrada em {request.createdAt}</p>
+            <ReviewThread request={request} reviewToken={reviewToken} authorName={authorName} />
           </article>)}
           {!visibleRequests.length && <p className="py-4 text-sm text-zinc-400">{requests.length ? "Nenhuma solicitação neste filtro." : "Nenhuma solicitação nesta versão. Assista ao vídeo e envie seu primeiro comentário."}</p>}
         </div>

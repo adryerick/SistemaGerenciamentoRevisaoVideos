@@ -26,8 +26,8 @@ export default async function ProjectDetailsPage({
     include: {
       client: { select: { name: true } },
       _count: { select: { changeRequests: true } },
-      videoVersions: { orderBy: { number: "desc" } },
-      changeRequests: { orderBy: { createdAt: "desc" } },
+      videoVersions: { orderBy: { number: "desc" }, include: { decisions: { orderBy: { id: "desc" }, take: 1 } } },
+      changeRequests: { orderBy: { createdAt: "desc" }, include: { replies: { orderBy: { id: "asc" } } } },
     },
   });
   if (!databaseProject) {

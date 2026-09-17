@@ -32,6 +32,7 @@ type VideoVersionRecord = {
   fileName: string;
   storagePath: string | null;
   sentAt: Date;
+  decisions?: { status: string; authorName: string | null; createdAt: Date }[];
 };
 
 type ChangeRequestRecord = {
@@ -42,6 +43,8 @@ type ChangeRequestRecord = {
   timestamp: string | null;
   status: string;
   createdAt: Date;
+  authorName?: string | null;
+  replies?: { id: number; comment: string; role: string; authorName: string | null; createdAt: Date }[];
 };
 
 export function toClientDto(client: ClientRecord): Client {
@@ -77,6 +80,9 @@ export function toVideoVersionDto(version: VideoVersionRecord): VideoVersion {
     fileName: version.fileName,
     videoUrl: version.storagePath ? `/api/projetos/${version.projectId}/versoes/${version.id}/video` : undefined,
     sentAt: version.sentAt.toLocaleDateString("pt-BR"),
+    reviewStatus: version.decisions?.[0]?.status ?? "Em revisão",
+    reviewedBy: version.decisions?.[0]?.authorName ?? undefined,
+    reviewedAt: version.decisions?.[0]?.createdAt.toLocaleString("pt-BR"),
   };
 }
 
@@ -95,5 +101,7 @@ export function toChangeRequestDto(
     timestamp: request.timestamp ?? undefined,
     status: status as ChangeRequest["status"],
     createdAt: request.createdAt.toLocaleDateString("pt-BR"),
+    authorName: request.authorName ?? undefined,
+    replies: request.replies?.map((reply) => ({ ...reply, authorName: reply.authorName ?? undefined, createdAt: reply.createdAt.toLocaleString("pt-BR") })) ?? [],
   };
 }

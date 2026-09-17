@@ -85,6 +85,11 @@ async function main() {
         const version = await upload.json();
         const feedback = await fetch(`${base}/api/projetos/${project.id}/solicitacoes`, { method: "POST", headers, body: JSON.stringify({ comment: `Conferir o ajuste da versão ${index}`, videoVersionId: version.id, timestamp: "00:01" }) });
         assert.equal(feedback.status, 201);
+        const request = await feedback.json();
+        assert.equal((await fetch(`${base}/api/solicitacoes/${request.id}/respostas`, { method: "POST", headers, body: JSON.stringify({ comment: "Ajuste conferido pelo editor de teste." }) })).status, 201);
+        if (index === 2) {
+          assert.equal((await fetch(`${base}/api/solicitacoes/${request.id}`, { method: "PATCH", headers, body: JSON.stringify({ status: "Resolvido" }) })).status, 200);
+        }
       }
       const html = await (await fetch(`${base}/projetos/${project.id}`, { headers: { Cookie: cookie } })).text();
       const reviewPath = html.match(/\/revisao\/[a-z0-9]+/)?.[0];

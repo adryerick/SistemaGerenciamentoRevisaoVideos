@@ -14,8 +14,8 @@ export default async function PublicReviewPage({
     select: {
       name: true,
       description: true,
-      videoVersions: { orderBy: { number: "desc" } },
-      changeRequests: { orderBy: { createdAt: "desc" } },
+      videoVersions: { orderBy: { number: "desc" }, include: { decisions: { orderBy: { id: "desc" }, take: 1 } } },
+      changeRequests: { orderBy: { createdAt: "desc" }, include: { replies: { orderBy: { id: "asc" } } } },
     },
   });
 

@@ -59,6 +59,7 @@ model VideoVersion {
   storagePath String?
   mimeType    String?
   fileSize    Int?
+  decisions   ReviewDecision[]
   sentAt      DateTime  @default(now())
   projectId   Int
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -71,6 +72,7 @@ model VideoVersion {
 model ChangeRequest {
   id             Int          @id @default(autoincrement())
   comment        String
+  authorName     String?
   timestamp      String?
   status         String       @default("Pendente")
   createdAt      DateTime     @default(now())
@@ -80,8 +82,30 @@ model ChangeRequest {
   project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   videoVersion   VideoVersion @relation(fields: [videoVersionId], references: [id], onDelete: Cascade)
   client         Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  replies        ReviewReply[]
 
   @@index([projectId])
   @@index([videoVersionId])
   @@index([clientId])
+}
+
+model ReviewReply {
+  id        Int @id @default(autoincrement())
+  comment   String
+  role      String
+  authorName String?
+  createdAt DateTime @default(now())
+  requestId Int
+  request   ChangeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  @@index([requestId])
+}
+
+model ReviewDecision {
+  id        Int @id @default(autoincrement())
+  status    String
+  authorName String?
+  createdAt DateTime @default(now())
+  videoVersionId Int
+  videoVersion VideoVersion @relation(fields: [videoVersionId], references: [id], onDelete: Cascade)
+  @@index([videoVersionId])
 }

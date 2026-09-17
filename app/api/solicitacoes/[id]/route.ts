@@ -22,7 +22,7 @@ async function handlePATCH(
   const requestId = Number(id);
   const existingRequest = await prisma.changeRequest.findFirst({
     where: { id: requestId, project: { editorId: editor.id } },
-    select: { id: true },
+    select: { id: true, videoVersionId: true },
   });
 
   if (!existingRequest) {
@@ -30,9 +30,10 @@ async function handlePATCH(
   }
 
   try {
-    const changeRequest = await prisma.changeRequest.update({
-      where: { id: existingRequest.id },
-      data: { status },
+    const changeRequest = await prisma.$transaction(async (tx) => {
+      const updated = await tx.changeRequest.update({ where: { id: existingRequest.id }, data: { status } });
+      if (status !== "Resolvido") await tx.reviewDecision.create({ data: { videoVersionId: existingRequest.videoVersionId, status: "Ajustes solicitados", authorName: editor.name } });
+      return updated;
     });
     return Response.json(toChangeRequestDto(changeRequest));
   } catch {

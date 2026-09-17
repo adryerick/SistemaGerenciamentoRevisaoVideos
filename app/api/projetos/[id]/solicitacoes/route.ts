@@ -34,7 +34,8 @@ async function handlePOST(
     );
   }
 
-  const changeRequest = await prisma.changeRequest.create({
+  const changeRequest = await prisma.$transaction(async (tx) => {
+    const created = await tx.changeRequest.create({
     data: {
       comment,
       timestamp: timestamp || null,
@@ -42,6 +43,9 @@ async function handlePOST(
       videoVersionId,
       clientId: project.clientId,
     },
+    });
+    await tx.reviewDecision.create({ data: { videoVersionId, status: "Ajustes solicitados", authorName: editor.name } });
+    return created;
   });
 
   return Response.json(toChangeRequestDto(changeRequest), { status: 201 });

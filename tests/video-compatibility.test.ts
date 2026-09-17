@@ -155,6 +155,37 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           const feedbackBody = await feedback.json();
           assert.equal(feedbackBody.timestamp, "00:00");
           assert.match(await (await fetch(`${base}${reviewPath}`)).text(), /Ajuste de cor do teste automatizado/);
+          const editorReplies = `${base}/api/solicitacoes/${feedbackBody.id}/respostas`;
+          const clientReplies = `${feedbackUrl}/${feedbackBody.id}/respostas`;
+          const postJson = (url: string, body: unknown) => fetch(url, { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) });
+          assert.equal((await postJson(editorReplies, { comment: "Anonymous must not impersonate editor" })).status, 401);
+          assert.equal((await editorFetch(editorReplies, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Resposta do editor integrada", authorName: "Spoofed name" }) })).status, 201);
+          assert.equal((await postJson(clientReplies, { comment: "Resposta do cliente integrada", authorName: "Cliente de teste", role: "Editor" })).status, 201);
+          assert.equal((await postJson(clientReplies, { comment: "  " })).status, 400);
+          assert.equal((await postJson(`${base}/api/revisao/wrong-token/solicitacoes/${feedbackBody.id}/respostas`, { comment: "Invalid link" })).status, 404);
+          assert.equal((await postJson(`${feedbackUrl}/2147483647/respostas`, { comment: "Wrong request" })).status, 404);
+          const conversation = await (await fetch(`${base}${reviewPath}`)).text();
+          assert.match(conversation, /Resposta do editor integrada/);
+          assert.match(conversation, /Resposta do cliente integrada/);
+          assert.doesNotMatch(conversation, /Spoofed name/);
+          const approvalUrl = `${base}/api${reviewPath}/aprovacao`;
+          assert.equal((await postJson(approvalUrl, { videoVersionId: uploadedBody.id })).status, 409);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id, authorName: 1 })).status, 400);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id, authorName: "Cliente aprovador" })).status, 200);
+          // Approval is idempotent and an additional adjustment reopens this version.
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 200);
+          assert.match(await (await fetch(`${base}${reviewPath}`)).text(), /Cliente aprovador/);
+          const latestFeedback = await postJson(feedbackUrl, { comment: "Ajuste depois da aprovação", videoVersionId: largeResult.id, timestamp: "00:00", authorName: "Cliente de teste" });
+          assert.equal(latestFeedback.status, 201);
+          const latestRequest = await latestFeedback.json();
+          assert.equal(latestRequest.authorName, "Cliente de teste");
+          assert.match(await (await fetch(`${base}${reviewPath}`)).text(), /Ajustes solicitados/);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 409);
+          assert.equal((await editorFetch(`${base}/api/solicitacoes/${latestRequest.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ status: "Resolvido" }) })).status, 200);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 200);
+          assert.equal((await editorFetch(`${base}/api/solicitacoes/${latestRequest.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ status: "Pendente" }) })).status, 200);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 409);
+          assert.equal((await editorFetch(`${base}/api/solicitacoes/${latestRequest.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ status: "Resolvido" }) })).status, 200);
           const resolved = await editorFetch(`${base}/api/solicitacoes/${feedbackBody.id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ status: "Resolvido" }) });
           assert.equal(resolved.status, 200);
           assert.match(await (await fetch(`${base}${reviewPath}`)).text(), /Resolvido/);
@@ -167,6 +198,17 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           assert.equal((await editorFetch(`${base}/projetos/invalid`)).status, 404);
           assert.equal((await editorFetch(`${base}/projetos/2147483647`)).status, 404);
 
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 200);
+          const nextVersion = new FormData();
+          nextVersion.append("video", new Blob([uploadedBytes], { type: "video/mp4" }), "new-unapproved-version.mp4");
+          const nextUpload = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: nextVersion });
+          const nextResult = await nextUpload.json();
+          assert.equal(nextUpload.status, 201, JSON.stringify(nextResult));
+          assert.equal(nextResult.number, 3);
+          assert.equal(nextResult.reviewStatus, "Em revisão", "New version must not inherit approval");
+          assert.equal(nextResult.reviewedBy, undefined);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 409);
+
           const corrupt = new FormData();
           corrupt.append("video", new Blob(["invalid"]), "broken.mp4");
           const rejected = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: corrupt });
@@ -177,6 +219,8 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           });
           assert.equal(disabled.status, 200);
           assert.equal((await fetch(publicVideo)).status, 404);
+          assert.equal((await postJson(clientReplies, { comment: "Link disabled" })).status, 404);
+          assert.equal((await postJson(approvalUrl, { videoVersionId: largeResult.id })).status, 404);
           assert.equal((await fetch(feedbackUrl, { method: "POST", headers: jsonHeaders, body: JSON.stringify({ comment: "Não deve aceitar", videoVersionId: uploadedBody.id }) })).status, 404);
           assert.equal((await fetch(`${base}${uploadedBody.videoUrl}`)).status, 401);
         } finally {

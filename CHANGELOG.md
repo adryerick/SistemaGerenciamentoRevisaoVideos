@@ -1,5 +1,16 @@
 # Histórico de entregas
 
+## 2026-09-17 — Conversas, aprovação e linha do tempo
+
+- Editor e cliente podem responder a cada solicitação, sem misturar a conversa com novos ajustes.
+- Nome opcional do cliente em comentários, respostas e aprovação; papel do editor definido pela sessão, não pelo formulário.
+- Aprovação registrada por versão e permitida somente na última versão, sem solicitações em aberto nela. Não conclui automaticamente o projeto.
+- Novo upload começa em revisão; novos ajustes e reabertura de solicitações invalidam a aprovação da versão afetada.
+- Marcadores numerados e clicáveis no player, com minutagem, cores por status e botões alternativos para instantes sobrepostos.
+- Migration aditiva preserva os dados existentes; testes integrados usam banco e vídeos isolados.
+- Identidade informada pelo link não é verificada; aprovação não equivale a assinatura digital.
+- Validação: 26 testes aprovados em produção, build e lint; conferência visual do marcador em 00:01 e envio de resposta em base isolada.
+
 ## 2026-09-17 — Captura de minutagem na revisão do cliente
 
 - Player consulta o estado nativo do vídeo e acompanha metadados, reprodução e recarregamento, em vez de depender exclusivamente do primeiro evento loadedmetadata.
