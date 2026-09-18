@@ -337,6 +337,12 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
             else restarted.kill("SIGTERM");
           }
 
+          // Deleting one version hides only its completed preparation, not other uploads.
+          assert.equal((await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "DELETE", headers: jsonHeaders, body: JSON.stringify({ versionId: prepared!.versionId }) })).status, 200);
+          const remainingJobs = await (await editorFetch(jobsUrl)).json();
+          assert.equal(remainingJobs.jobs.some((job: { id: string }) => job.id === asyncResult.jobId), false);
+          assert.equal(remainingJobs.jobs.some((job: { id: string }) => job.id === interruptedId), true);
+
           const corrupt = new FormData();
           corrupt.append("video", new Blob(["invalid"]), "broken.mp4");
           const rejected = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: corrupt });

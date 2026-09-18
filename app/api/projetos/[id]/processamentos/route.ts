@@ -8,7 +8,9 @@ async function get(_request: Request, { params }: RouteContext<"/api/projetos/[i
   const projectId = Number(id);
   if (!Number.isSafeInteger(projectId) || projectId <= 0) return Response.json({ error: "Projeto inválido." }, { status: 400 });
   if (!await prisma.project.findFirst({ where: { id: projectId, editorId: editor.id }, select: { id: true } })) return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
-  const jobs = await prisma.videoJob.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, fileName: true, status: true, error: true, versionId: true, attempts: true } });
+  // Completed jobs retain history, but must not link to deleted versions.
+  const versions = await prisma.videoVersion.findMany({ where: { projectId }, select: { id: true } });
+  const jobs = await prisma.videoJob.findMany({ where: { projectId, OR: [{ status: { not: "Pronto" } }, { versionId: { in: versions.map((version) => version.id) } }] }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, fileName: true, status: true, error: true, versionId: true, attempts: true } });
   return Response.json({ jobs, online: await workerOnline() }, { headers: { "Cache-Control": "no-store" } });
 }
 async function retry(request: Request, { params }: RouteContext<"/api/projetos/[id]/processamentos">) {

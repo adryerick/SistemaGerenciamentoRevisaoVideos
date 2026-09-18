@@ -1,5 +1,11 @@
 # Histórico de entregas
 
+## 2026-09-18 — Preparos acompanham a exclusão de versões
+
+- Lista de preparos oculta envios concluídos cuja versão já foi apagada, incluindo registros anteriores à correção.
+- Versões existentes, fila e falhas continuam visíveis; nenhum arquivo ou histórico adicional é removido.
+- Regressão integrada verifica a exclusão de uma versão e a preservação do preparo de outra; 36 testes aprovados em produção, lint e build.
+
 ## 2026-09-18 — Lapidação visual do editor e cliente
 
 - Identidade escura com tipografia Geist, fundo sutil e ações principais em verde suave.
