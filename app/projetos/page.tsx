@@ -101,7 +101,7 @@ export default function Projects() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0d0f] text-white">
+    <main className="vr-workspace min-h-screen bg-[#0d0d0f] text-white">
       <div className="flex min-h-screen flex-col sm:flex-row">
 
         {/* SIDEBAR */}
@@ -127,7 +127,7 @@ export default function Projects() {
             <button
               onClick={() => setShowModal(true)}
               disabled={isLoading}
-              className="shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="vr-primary shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               + Novo projeto
             </button>

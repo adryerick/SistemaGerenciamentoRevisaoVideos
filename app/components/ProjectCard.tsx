@@ -12,13 +12,13 @@ export default function ProjectCard({
   onDelete,
 }: ProjectCardProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[#29292d] bg-[#151517]">
+    <div className="vr-surface vr-project-card flex h-full flex-col overflow-hidden rounded-2xl border border-[#29292d] bg-[#151517]">
 
       {/* THUMBNAIL */}
       <ProjectThumbnail project={project} />
 
       {/* CONTEÚDO */}
-      <div className="p-5">
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
 
         <div className="mb-4 flex items-center justify-between">
 
@@ -32,20 +32,20 @@ export default function ProjectCard({
 
         </div>
 
-        <h3 className="text-lg font-semibold">
+        <h3 className="break-words text-xl font-semibold">
           {project.name}
         </h3>
 
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-400">
           {project.client}
         </p>
 
-        <p className="mt-3 text-xs leading-5 text-zinc-600">
+        <p className="mt-3 line-clamp-2 break-words text-sm leading-6 text-zinc-400">
           {project.description || "Sem descrição."}
         </p>
 
         {/* PROGRESSO */}
-        <div className="mt-6">
+        <div className="mb-6 mt-6">
 
           <div className="mb-2 flex items-center justify-between">
 
@@ -62,7 +62,7 @@ export default function ProjectCard({
           <div className="h-1.5 overflow-hidden rounded-full bg-[#29292d]">
 
             <div
-              className="h-full rounded-full bg-[#77717f]"
+              className="h-full rounded-full bg-emerald-300"
               style={{
                 width: `${project.progress}%`,
               }}
@@ -73,7 +73,7 @@ export default function ProjectCard({
         </div>
 
         {/* RODAPÉ */}
-        <div className="mt-6 flex items-center justify-between gap-3">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-5">
 
           <span className="text-xs text-zinc-500">
             {project.requests} solicitações
@@ -91,7 +91,7 @@ export default function ProjectCard({
             )}
             <Link
               href={`/projetos/${project.id}`}
-              className="rounded-lg border border-[#303035] bg-[#1b1b1e] px-3 py-2 text-xs text-zinc-300 transition hover:bg-[#232328]"
+              className="vr-primary rounded-lg border border-[#303035] bg-[#1b1b1e] px-4 py-2 text-xs font-medium text-zinc-300 transition hover:bg-[#232328]"
             >
               Gerenciar
             </Link>

@@ -77,7 +77,7 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0d0d0f] text-white sm:flex-row">
+    <div className="vr-workspace flex min-h-screen flex-col bg-[#0d0d0f] text-white sm:flex-row">
       <Sidebar />
 
       <main className="min-w-0 flex-1 p-4 sm:p-8">
@@ -95,7 +95,7 @@ export default function ClientesPage() {
                 setEditingClient(null);
                 setIsModalOpen(true);
               }}
-              className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="vr-primary rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               + Novo cliente
             </button>

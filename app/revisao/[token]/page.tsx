@@ -26,10 +26,10 @@ export default async function PublicReviewPage({
   const videoVersions = project.videoVersions.map(toVideoVersionDto);
 
   return (
-    <main className="min-h-screen bg-[#0d0d0f] px-5 py-10 text-white sm:px-8">
+    <main className="vr-workspace min-h-screen bg-[#0d0d0f] px-5 py-10 text-white sm:px-8">
       <div className="mx-auto max-w-6xl">
-        <p className="text-sm font-medium text-zinc-500">VideoReview</p>
-        <h1 className="mt-3 text-3xl font-semibold">{project.name}</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">VideoReview <span className="ml-3 border-l border-white/15 pl-3 font-normal tracking-normal text-zinc-400">Área de revisão</span></p>
+        <h1 className="mt-4 break-words text-3xl font-semibold sm:text-4xl">{project.name}</h1>
         {project.description && (
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
             {project.description}

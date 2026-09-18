@@ -94,7 +94,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
       <div className="lg:col-span-2"><ReviewUpdates endpoint={`/api/revisao/${reviewToken}/atividade`} /></div>
-      <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
+      <section className="vr-surface rounded-2xl border border-[#29292d] bg-[#151517] p-5 sm:p-6">
         <h2 className="text-lg font-semibold">Revisar vídeo</h2>
         <label htmlFor="review-version" className="mt-4 block text-sm text-zinc-400">Versão em revisão</label>
         <select id="review-version" value={selected.id} disabled={sending}
@@ -131,7 +131,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
         </div>
       </section>
 
-      <form onSubmit={submitFeedback} className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
+      <form onSubmit={submitFeedback} className="vr-surface rounded-2xl border border-[#29292d] bg-[#151517] p-5 sm:p-6">
         <h2 className="text-lg font-semibold">Enviar solicitação de ajuste</h2>
         <p className="mt-1 text-sm text-zinc-400">Use “Comentar neste instante” no vídeo ou preencha a minutagem manualmente.</p>
         <fieldset disabled={sending} className="mt-5 space-y-3">
@@ -146,7 +146,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
           <p className="text-xs text-zinc-500">{comment.length}/2.000 caracteres</p>
           {(comment || timestamp) && <p className="text-xs text-zinc-400">Rascunho separado por versão, salvo neste navegador quando o armazenamento está disponível. Ainda não foi enviado ao editor.</p>}
           {timestamp && <button type="button" onClick={() => draft.update({ timestamp: "" })} className="text-xs text-zinc-300 underline">Remover minutagem: comentário geral</button>}
-          <button className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black disabled:opacity-50">{sending ? "Enviando..." : "Enviar solicitação"}</button>
+          <button className="vr-primary rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black disabled:opacity-50">{sending ? "Enviando..." : "Enviar solicitação"}</button>
         </fieldset>
         {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
         {success && <p role="status" className="mt-4 text-sm text-emerald-300">Solicitação enviada. Obrigado pelo feedback!</p>}
@@ -154,7 +154,7 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
 
       <div className="lg:col-span-2"><VersionComparison versions={videoVersions} token={reviewToken} /></div>
 
-      <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5 lg:col-span-2">
+      <section className="vr-surface rounded-2xl border border-[#29292d] bg-[#151517] p-5 sm:p-6 lg:col-span-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Solicitações desta versão ({requests.length})</h2>
           <button type="button" onClick={refresh} disabled={refreshing || sending} className="rounded-lg border border-zinc-600 px-3 py-2 text-sm disabled:opacity-50">{refreshing ? "Atualizando..." : "Atualizar status"}</button>

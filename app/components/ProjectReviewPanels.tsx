@@ -214,7 +214,7 @@ export default function ProjectReviewPanels({
   return (
     <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
       <div className="xl:col-span-2"><VersionComparison versions={versions} /></div>
-      <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
+      <section className="vr-surface rounded-2xl border border-[#29292d] bg-[#151517] p-5 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Versões de vídeo</h2>
@@ -242,7 +242,7 @@ export default function ProjectReviewPanels({
               <button
                 onClick={handleCreateVersion}
                 disabled={isUploading}
-                className="shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+                className="vr-primary shrink-0 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isUploading ? uploadProgress === 100 ? "Confirmando recebimento..." : `Enviando ${uploadProgress}%` : "Enviar vídeo"}
               </button>
@@ -310,7 +310,7 @@ export default function ProjectReviewPanels({
         </div>
       </section>
 
-      <section className="rounded-xl border border-[#29292d] bg-[#151517] p-5">
+      <section className="vr-surface rounded-2xl border border-[#29292d] bg-[#151517] p-5 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Solicitações</h2>

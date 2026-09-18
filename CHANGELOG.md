@@ -1,5 +1,14 @@
 # Histórico de entregas
 
+## 2026-09-18 — Lapidação visual do editor e cliente
+
+- Identidade escura com tipografia Geist, fundo sutil e ações principais em verde suave.
+- Cartões com bordas arredondadas, contraste, espaçamento e destaque ao passar o cursor.
+- Navegação selecionada com destaque verde e símbolo vetorial de vídeo.
+- Login, projetos, clientes e revisão compartilham a mesma linguagem visual; dados e fluxos preservados.
+- Foco de teclado e preferência por movimento reduzido tratados no tema.
+- Conferência visual isolada de projetos e revisão, vídeos verticais e horizontais e console sem erros; 36 testes aprovados, lint e build.
+
 ## 2026-09-18 — Player proporcional para vídeos verticais e horizontais
 
 - Player compartilhado por editor, cliente e comparação usa as dimensões reais do vídeo, incluindo 9:16 e 16:9.

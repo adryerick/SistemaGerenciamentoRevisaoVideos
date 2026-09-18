@@ -30,8 +30,8 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div className="mb-4 flex items-center gap-3 sm:mb-10">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2b2b2d] font-bold sm:h-10 sm:w-10">
-          R
+        <div aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-emerald-200 sm:h-10 sm:w-10">
+          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5"><path d="M9 6.5v11l9-5.5-9-5.5Z" fill="currentColor" /><path d="M5 5v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
         </div>
 
         <div>
@@ -59,7 +59,7 @@ export default function Sidebar() {
               aria-current={isActive ? "page" : undefined}
               className={`block min-w-0 flex-1 rounded-lg px-3 py-2.5 text-center text-sm transition sm:text-left ${
                 isActive
-                  ? "bg-[#1d1d21] text-white hover:bg-[#242428]"
+                  ? "bg-emerald-300/10 text-emerald-200 ring-1 ring-inset ring-emerald-300/20 hover:bg-emerald-300/15"
                   : "text-zinc-500 hover:bg-[#1d1d21] hover:text-white"
               }`}
             >

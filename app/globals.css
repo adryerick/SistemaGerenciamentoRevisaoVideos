@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0d0d0f;
+  --foreground: #ededed;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -22,5 +23,42 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  h1, h2, h3 { letter-spacing: -0.035em; }
+  button:not(:disabled), a, select:not(:disabled) { cursor: pointer; }
+  :focus-visible { outline: 2px solid #6ee7b7; outline-offset: 4px; }
+  ::selection { background: #065f46; color: #ecfdf5; }
+  input:not([type="checkbox"]):not([type="file"]), textarea, select {
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: #6ee7b7;
+    box-shadow: 0 0 0 3px #6ee7b712;
+  }
+}
+
+.vr-workspace {
+  background: radial-gradient(ellipse at 80% 0%, #15312b40, transparent 42%), #0d0d0f;
+}
+.vr-surface {
+  background: linear-gradient(145deg, #1b1b1e, #141416);
+  border-color: #ffffff12;
+  box-shadow: 0 8px 30px #00000018, inset 0 1px 0 #ffffff04;
+}
+.vr-project-card { transition: border-color 180ms ease, box-shadow 180ms ease; }
+.vr-project-card:hover { border-color: #6ee7b738; box-shadow: 0 12px 36px #00000035; }
+.vr-primary {
+  background: #a7f3d0;
+  color: #052e24;
+  border-color: transparent;
+  box-shadow: 0 3px 12px #34d39912;
+}
+.vr-primary:hover:not(:disabled) { background: #d1fae5; }
+.vr-primary:disabled { opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
 }

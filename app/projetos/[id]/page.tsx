@@ -38,7 +38,7 @@ export default async function ProjectDetailsPage({
   const changeRequests = databaseProject.changeRequests.map(toChangeRequestDto);
 
   return (
-    <main className="min-h-screen bg-[#0d0d0f] text-white">
+    <main className="vr-workspace min-h-screen bg-[#0d0d0f] text-white">
       <div className="flex min-h-screen flex-col sm:flex-row">
         <Sidebar />
 
