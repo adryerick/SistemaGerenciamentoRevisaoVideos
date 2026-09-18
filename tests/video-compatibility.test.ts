@@ -80,6 +80,10 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
         let duplicateClientId: number | undefined;
         let projectId: number | undefined;
         try {
+          for (const body of ["not-json", "null", JSON.stringify({ name: "Teste", email: "invalido" }), JSON.stringify({ name: "x".repeat(121), email: "test@example.test" })]) {
+            const invalidClient: Response = await editorFetch(`${base}/api/clients`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+            assert.equal(invalidClient.status, 400, "Malformed client input must not crash or create a client");
+          }
           const clientResponse = await editorFetch(`${base}/api/clients`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: `VideoTest-${Date.now()}`, email: `video-${Date.now()}@example.test` }),
@@ -87,6 +91,9 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           assert.equal(clientResponse.status, 201);
           const client = await clientResponse.json();
           clientId = client.id;
+          for (const body of ["not-json", "null", JSON.stringify({ name: "Teste", email: "invalido" })]) {
+            assert.equal((await editorFetch(`${base}/api/clients/${clientId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body })).status, 400);
+          }
           const duplicateResponse = await editorFetch(`${base}/api/clients`, {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: client.name, email: `duplicate-${Date.now()}@example.test` }),
@@ -109,11 +116,19 @@ test("video formats become decodable H.264/AAC with fast-start metadata", { time
           const project = await projectResponse.json();
           if (process.env.VIDEO_TEST_PROJECT_ID) assert.equal(project.id, Number(process.env.VIDEO_TEST_PROJECT_ID), "Refuse uploads/deletions outside reserved test project");
           projectId = project.id;
+          const emptyDetails = await (await editorFetch(`${base}/projetos/${projectId}`)).text();
+          const emptyReviewPath = emptyDetails.match(/\/revisao\/[a-z0-9]+/)?.[0];
+          assert.ok(emptyReviewPath);
+          const emptyReviewHtml = await (await fetch(`${base}${emptyReviewPath}`)).text();
+          assert.match(emptyReviewHtml, /Verificar se o vídeo chegou/);
+          const emptyActivity = await (await fetch(`${base}/api${emptyReviewPath}/atividade`)).json();
           const form = new FormData();
           form.append("video", new Blob([await readFile(path.join(directory, "hevc10.mp4"))], { type: "video/mp4" }), "CapCut-test.mp4");
           const uploaded = await editorFetch(`${base}/api/projetos/${projectId}/versoes`, { method: "POST", body: form });
           const uploadedBody = await uploaded.json();
           assert.equal(uploaded.status, 201, JSON.stringify(uploadedBody));
+          const firstUploadActivity = await (await fetch(`${base}/api${emptyReviewPath}/atividade`)).json();
+          assert.notEqual(firstUploadActivity.signature, emptyActivity.signature, "Empty review must detect the first uploaded video");
           const direct = await editorFetch(`${base}${uploadedBody.videoUrl}`);
           assert.equal(direct.status, 200);
           const uploadedBytes = Buffer.from(await direct.arrayBuffer());

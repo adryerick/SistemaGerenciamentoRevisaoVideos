@@ -35,29 +35,27 @@ export default function ClientesPage() {
   }, []);
 
   async function handleSaveClient(data: Pick<Client, "name" | "email">) {
+    let response: Response;
     try {
-      const response = await fetch(editingClient ? `/api/clients/${editingClient.id}` : "/api/clients", {
+      response = await fetch(editingClient ? `/api/clients/${editingClient.id}` : "/api/clients", {
         method: editingClient ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result.error ?? "Não foi possível salvar o cliente.");
-        return;
-      }
-
-      setClients((currentClients) =>
-        editingClient
-          ? currentClients.map((client) => client.id === result.id ? result : client)
-          : [result, ...currentClients],
-      );
-      setEditingClient(null);
-      setIsModalOpen(false);
     } catch {
-      alert("Não foi possível conectar ao banco de dados.");
+      throw new Error("Falha de conexão. Seus dados foram mantidos; confira a lista de clientes antes de tentar novamente.");
     }
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error ?? "Não foi possível salvar o cliente. Seus dados foram mantidos.");
+    if (!result.id) throw new Error("A resposta do servidor não pôde ser confirmada. Confira a lista de clientes antes de tentar novamente.");
+
+    setClients((currentClients) =>
+      editingClient
+        ? currentClients.map((client) => client.id === result.id ? result : client)
+        : [result, ...currentClients],
+    );
+    setEditingClient(null);
+    setIsModalOpen(false);
   }
 
   async function handleDeleteClient(client: Client) {
@@ -79,12 +77,12 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0d0d0f] text-white">
+    <div className="flex min-h-screen flex-col bg-[#0d0d0f] text-white sm:flex-row">
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="min-w-0 flex-1 p-4 sm:p-8">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold">Clientes</h1>
               <p className="mt-1 text-sm text-zinc-500">

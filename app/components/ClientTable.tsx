@@ -8,8 +8,9 @@ type ClientTableProps = {
 
 export default function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[#29292d] bg-[#151517]">
-      <table className="w-full">
+    <div className="overflow-x-auto rounded-xl border border-[#29292d] bg-[#151517]">
+      <table className="w-full min-w-[640px]">
+        <caption className="sr-only">Clientes cadastrados e ações disponíveis</caption>
         <thead className="border-b border-[#29292d] bg-[#111113]">
           <tr>
             <th className="px-5 py-4 text-left text-xs font-medium text-zinc-500">
@@ -31,6 +32,7 @@ export default function ClientTable({ clients, onEdit, onDelete }: ClientTablePr
         </thead>
 
         <tbody className="divide-y divide-[#29292d]">
+          {clients.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-zinc-500">Nenhum cliente cadastrado. Use “Novo cliente” para começar.</td></tr>}
           {clients.map((client) => (
             <tr key={client.id} className="transition hover:bg-[#1a1a1d]">
               <td className="px-5 py-4">

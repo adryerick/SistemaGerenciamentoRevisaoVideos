@@ -1,5 +1,17 @@
 # Histórico de entregas
 
+## 2026-09-18 — Revisão final de usabilidade e validação
+
+- Cadastro e edição de clientes aguardam a confirmação, bloqueiam envios repetidos e preservam os campos em falhas, com mensagem no formulário.
+- API de clientes valida JSON, nome e e-mail sem gerar erro interno para entradas inválidas.
+- Editor adaptado para celular com navegação horizontal, filtros flexíveis, tabela rolável e modais limitados à altura da tela.
+- Seleção de versão válida após o primeiro upload em segundo plano ou remoção de uma versão.
+- Revisão ainda sem vídeo acompanha novidades e permite verificar a chegada da primeira versão.
+- Campo de revisão mostra o endereço completo para copiar manualmente; orientação específica para endereço local e sessão expirada.
+- Vídeo público reutiliza a validação de caminho por projeto e a mesma transmissão parcial do editor.
+- Modo `--check-empty-review` cria uma instalação descartável para testar o primeiro upload visualmente.
+- Validação: 34 testes aprovados em produção, lint e build; regressões de entradas inválidas de clientes, seleção de versão e chegada do primeiro vídeo.
+
 ## 2026-09-17 — Prévia visual dos projetos
 
 - Cartões de projetos e dashboard mostram uma miniatura real da versão mais recente, sem transmitir o vídeo inteiro.

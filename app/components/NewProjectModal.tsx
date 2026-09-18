@@ -44,7 +44,7 @@ export default function NewProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <form onSubmit={handleCreate} role="dialog" aria-modal="true" aria-labelledby="new-project-title" className="w-full max-w-lg rounded-2xl border border-[#29292d] bg-[#151517] p-6 shadow-2xl">
+      <form onSubmit={handleCreate} role="dialog" aria-modal="true" aria-labelledby="new-project-title" className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#29292d] bg-[#151517] p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h3 id="new-project-title" className="text-lg font-semibold">Novo projeto</h3>

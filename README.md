@@ -162,6 +162,9 @@ pública, comentários, edição, progresso e desativação. Reserva um ID de pr
 - `npm run test:mvp -- --check-thumbnails --production`: prepara os mesmos vídeos
   isolados e uma conta fictícia para conferir as miniaturas em Projetos/Dashboard.
 - `npm run test:mvp -- --production`: executa a suíte integrada na compilação de produção.
+- `npm run test:mvp -- --check-empty-review --production`: cria projeto sem vídeo,
+  conta e vídeo sintético isolados para conferir a chegada da primeira versão e os
+  avisos da revisão; Enter encerra e remove somente os dados desse teste.
 
 O teste de conversão inclui H.264, HEVC de 10 bits, WebM/VP9 e ProRes sem áudio.
 O teste integrado envia um MP4 válido acima de 10 MB para impedir a regressão

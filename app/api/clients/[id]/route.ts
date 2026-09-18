@@ -2,14 +2,7 @@ import { withEditor } from "../../../lib/auth";
 import { getDemoEditor } from "../../../lib/demo-editor";
 import { toClientDto } from "../../../lib/presenters";
 import { prisma } from "../../../lib/prisma";
-
-function readClientData(body: unknown) {
-  const data = body as { name?: unknown; email?: unknown };
-  return {
-    name: typeof data.name === "string" ? data.name.trim() : "",
-    email: typeof data.email === "string" ? data.email.trim().toLowerCase() : "",
-  };
-}
+import { validateClientInput } from "../../../lib/client-input";
 
 async function handlePATCH(
   request: Request,
@@ -17,11 +10,12 @@ async function handlePATCH(
 ) {
   const { id } = await params;
   const clientId = Number(id);
-  const { name, email } = readClientData(await request.json());
-
-  if (!Number.isInteger(clientId) || !name || !email) {
-    return Response.json({ error: "Nome e e-mail são obrigatórios." }, { status: 400 });
+  if (!Number.isSafeInteger(clientId) || clientId <= 0) {
+    return Response.json({ error: "Cliente inválido." }, { status: 400 });
   }
+  const input = validateClientInput(await request.json().catch(() => null));
+  if ("error" in input) return Response.json(input, { status: 400 });
+  const { name, email } = input;
 
   const editor = await getDemoEditor();
   const client = await prisma.client.findFirst({

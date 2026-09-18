@@ -73,7 +73,7 @@ async function main() {
       assert.ok(attempt < 29, `Test worker did not start: ${logs}`);
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    if (process.argv.includes("--check-review") || process.argv.includes("--check-thumbnails")) {
+    if (process.argv.includes("--check-review") || process.argv.includes("--check-thumbnails") || process.argv.includes("--check-empty-review")) {
       assert.ok(process.stdin.isTTY && ffmpegPath, "Use --check-review em um terminal interativo com FFmpeg instalado.");
       const headers = { Cookie: cookie, "Content-Type": "application/json" };
       const clientResponse = await fetch(`${base}/api/clients`, { method: "POST", headers, body: JSON.stringify({ name: "Cliente de revisão visual", email: "review@example.test" }) });
@@ -86,7 +86,8 @@ async function main() {
       reviewFixture = { id: project.id, cookie };
       const sample = path.join(temporary, "sample.mp4");
       await promisify(execFile)(ffmpegPath!, ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=24", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-threads", "2", sample], { windowsHide: true });
-      for (let index = 1; index <= 2; index++) {
+      const fixtureVersions = process.argv.includes("--check-empty-review") ? 0 : 2;
+      for (let index = 1; index <= fixtureVersions; index++) {
         const form = new FormData();
         form.append("video", new Blob([await readFile(sample)], { type: "video/mp4" }), `Teste-visual-${index}.mp4`);
         const upload: Response = await fetch(`${base}/api/projetos/${project.id}/versoes`, { method: "POST", headers: { Cookie: cookie }, body: form });
@@ -104,6 +105,7 @@ async function main() {
       const reviewPath = html.match(/\/revisao\/[a-z0-9]+/)?.[0];
       assert.ok(reviewPath);
       console.log(`REVISÃO VISUAL ISOLADA: ${base}${reviewPath}`);
+      if (process.argv.includes("--check-empty-review")) console.log(`PRIMEIRO ENVIO ISOLADO: ${base}/projetos/${project.id}. Vídeo sintético: ${sample}. Conta APENAS de teste: mvp@example.test / MVP-test-password-2026`);
       if (process.argv.includes("--check-thumbnails")) console.log(`MINIATURAS ISOLADAS: ${base}/projetos. Conta APENAS de teste: mvp@example.test / MVP-test-password-2026`);
       console.log("Confira apenas esta revisão pública. Pressione Enter para remover os vídeos e o banco exclusivos de teste.");
       await new Promise<void>((resolve) => { process.stdin.resume(); process.stdin.once("data", () => { process.stdin.pause(); resolve(); }); });

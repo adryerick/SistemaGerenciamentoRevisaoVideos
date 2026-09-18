@@ -2,6 +2,7 @@ import { withEditor } from "../../lib/auth";
 import { getDemoEditor } from "../../lib/demo-editor";
 import { toClientDto } from "../../lib/presenters";
 import { prisma } from "../../lib/prisma";
+import { validateClientInput } from "../../lib/client-input";
 
 async function handleGET() {
   const editor = await getDemoEditor();
@@ -15,13 +16,9 @@ async function handleGET() {
 }
 
 async function handlePOST(request: Request) {
-  const body = await request.json();
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-
-  if (!name || !email) {
-    return Response.json({ error: "Nome e e-mail são obrigatórios." }, { status: 400 });
-  }
+  const input = validateClientInput(await request.json().catch(() => null));
+  if ("error" in input) return Response.json(input, { status: 400 });
+  const { name, email } = input;
 
   const editor = await getDemoEditor();
 

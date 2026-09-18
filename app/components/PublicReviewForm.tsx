@@ -82,7 +82,14 @@ export default function PublicReviewForm({ reviewToken, videoVersions, changeReq
     } finally { setSending(false); }
   }
 
-  if (!selected) return <p className="rounded-xl border border-dashed border-[#303035] p-8 text-sm text-zinc-400">Ainda não há uma versão de vídeo disponível para revisão.</p>;
+  if (!selected) return <div className="space-y-4">
+    <ReviewUpdates endpoint={`/api/revisao/${reviewToken}/atividade`} />
+    <section className="rounded-xl border border-dashed border-[#303035] p-6 text-sm text-zinc-400">
+      <p>Ainda não há uma versão de vídeo disponível para revisão.</p>
+      <p className="mt-2">Quando o editor enviar o vídeo, você receberá um aviso nesta página.</p>
+      <button type="button" disabled={refreshing} onClick={refresh} className="mt-4 rounded-lg border border-zinc-600 px-3 py-2 text-zinc-200 disabled:opacity-40">{refreshing ? "Atualizando..." : "Verificar se o vídeo chegou"}</button>
+    </section>
+  </div>;
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">

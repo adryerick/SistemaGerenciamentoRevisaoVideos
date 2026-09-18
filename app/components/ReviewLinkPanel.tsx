@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+
+const subscribeOrigin = () => () => {};
+const readOrigin = () => window.location.origin;
+const serverOrigin = () => "";
 
 type ReviewLinkPanelProps = {
   projectId: number;
@@ -18,13 +22,14 @@ export default function ReviewLinkPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const reviewPath = `/revisao/${reviewToken}`;
+  const origin = useSyncExternalStore(subscribeOrigin, readOrigin, serverOrigin);
+  const reviewUrl = origin ? new URL(reviewPath, origin).toString() : reviewPath;
+  const isLocal = origin && ["localhost", "127.0.0.1", "[::1]"].includes(new URL(origin).hostname);
 
   async function copyLink() {
     setError("");
     try {
-    await navigator.clipboard.writeText(
-      new URL(reviewPath, window.location.origin).toString(),
-    );
+    await navigator.clipboard.writeText(reviewUrl);
     setCopied(true);
     } catch { setError("Não foi possível copiar automaticamente. Abra o link abaixo e copie o endereço do navegador."); }
   }
@@ -70,7 +75,8 @@ export default function ReviewLinkPanel({
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <input
           readOnly
-          value={reviewPath}
+          value={reviewUrl}
+          onFocus={(event) => event.currentTarget.select()}
           aria-label="Link público de revisão"
           className="min-w-0 flex-1 rounded-lg border border-[#303035] bg-[#111113] px-3 py-2.5 text-sm text-zinc-400 outline-none"
         />
@@ -91,7 +97,9 @@ export default function ReviewLinkPanel({
         </button>
       </div>
       <a href={reviewPath} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm text-zinc-300 underline">Abrir revisão em outra aba</a>
-      <p className="mt-2 text-xs text-zinc-500">Se o endereço começa com localhost, ele funciona apenas neste computador. Para clientes externos, será necessário publicar o sistema.</p>
+      <p className="mt-2 text-xs text-zinc-500">{isLocal
+        ? "Este endereço é local. Para enviar a clientes, entre pelo link público e copie o endereço por lá."
+        : "Envie este endereço ao cliente. Se a cópia automática falhar, selecione o campo acima e copie manualmente."}</p>
       {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
     </section>
   );

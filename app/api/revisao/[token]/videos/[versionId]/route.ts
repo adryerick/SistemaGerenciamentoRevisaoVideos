@@ -1,9 +1,5 @@
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
-import path from "node:path";
-import { Readable } from "node:stream";
 import { prisma } from "../../../../../lib/prisma";
-import { parseVideoRange } from "../../../../../lib/video-range";
+import { videoResponse } from "../../../../../lib/video-response";
 
 export const runtime = "nodejs";
 
@@ -14,7 +10,7 @@ export async function GET(
   const { token, versionId } = await params;
   const videoVersionId = Number(versionId);
 
-  if (!Number.isInteger(videoVersionId)) {
+  if (!Number.isSafeInteger(videoVersionId) || videoVersionId <= 0) {
     return new Response("Vídeo não encontrado.", { status: 404 });
   }
 
@@ -29,50 +25,12 @@ export async function GET(
 
   const videoVersion = await prisma.videoVersion.findFirst({
     where: { id: videoVersionId, projectId: project.id },
-    select: { storagePath: true, mimeType: true },
+    select: { projectId: true, storagePath: true, mimeType: true },
   });
 
-  if (!videoVersion?.storagePath?.startsWith("/uploads/projects/")) {
+  if (!videoVersion) {
     return new Response("Vídeo não encontrado.", { status: 404 });
   }
 
-  const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
-  const filePath = path.resolve(process.cwd(), "public", `.${videoVersion.storagePath}`);
-  if (!filePath.startsWith(`${uploadsRoot}${path.sep}`)) {
-    return new Response("Vídeo não encontrado.", { status: 404 });
-  }
-
-  let fileInfo;
-  try {
-    fileInfo = await stat(filePath);
-  } catch {
-    return new Response("Vídeo não encontrado.", { status: 404 });
-  }
-
-  const range = parseVideoRange(request.headers.get("range"), fileInfo.size);
-  if (!range) {
-    return new Response(null, {
-      status: 416,
-      headers: { "Content-Range": `bytes */${fileInfo.size}` },
-    });
-  }
-
-  const contentLength = range.end - range.start + 1;
-  const stream = Readable.toWeb(
-    createReadStream(filePath, { start: range.start, end: range.end }),
-  ) as ReadableStream;
-
-  return new Response(stream, {
-    status: range.partial ? 206 : 200,
-    headers: {
-      "Accept-Ranges": "bytes",
-      "Content-Length": String(contentLength),
-      "Content-Type": videoVersion.mimeType || "video/mp4",
-      "Cache-Control": "private, no-store",
-      "X-Content-Type-Options": "nosniff",
-      ...(range.partial
-        ? { "Content-Range": `bytes ${range.start}-${range.end}/${fileInfo.size}` }
-        : {}),
-    },
-  });
+  return videoResponse(request, videoVersion);
 }

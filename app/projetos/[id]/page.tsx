@@ -39,7 +39,7 @@ export default async function ProjectDetailsPage({
 
   return (
     <main className="min-h-screen bg-[#0d0d0f] text-white">
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen flex-col sm:flex-row">
         <Sidebar />
 
         <section className="min-w-0 flex-1 p-4 sm:p-8">
@@ -51,7 +51,7 @@ export default async function ProjectDetailsPage({
           </Link>
 
           <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0 break-words">
               <p className="text-sm text-zinc-500">{project.client}</p>
               <h1 className="mt-1 text-2xl font-semibold">{project.name}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">

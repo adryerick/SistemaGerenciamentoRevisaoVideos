@@ -4,6 +4,14 @@ import { isPriority, sortRequests } from "../app/lib/request-priority";
 import { comparisonTime, seekComparison } from "../app/lib/version-comparison";
 import { jobDirectory, workerIsOnline } from "../app/lib/video-jobs";
 import type { ChangeRequest } from "../app/types";
+import { selectedVersionId } from "../app/lib/version-selection";
+
+test("selection stays valid after the first background upload and version removal", () => {
+  assert.equal(selectedVersionId([], 0), 0);
+  assert.equal(selectedVersionId([{ id: 7 }], 0), 7);
+  assert.equal(selectedVersionId([{ id: 8 }, { id: 7 }], 7), 7);
+  assert.equal(selectedVersionId([{ id: 8 }], 7), 8);
+});
 
 test("priority and checklist place unresolved high-priority requests first without changing the input", () => {
   const make = (id: number, status: ChangeRequest["status"], priority: ChangeRequest["priority"]): ChangeRequest => ({ id, projectId: 1, videoVersionId: 1, comment: "Teste", createdAt: "17/09/2026", status, priority });

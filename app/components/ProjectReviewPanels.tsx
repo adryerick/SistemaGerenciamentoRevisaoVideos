@@ -13,6 +13,7 @@ import VersionReviewStatus from "./VersionReviewStatus";
 import VersionComparison from "./VersionComparison";
 import { priorities, sortRequests } from "../lib/request-priority";
 import VideoJobs from "./VideoJobs";
+import { selectedVersionId } from "../lib/version-selection";
 
 type ProjectReviewPanelsProps = {
   projectId: number;
@@ -48,6 +49,7 @@ export default function ProjectReviewPanels({
   const [comment, setComment] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [videoVersionId, setVideoVersionId] = useState(videoVersions[0]?.id ?? 0);
+  const activeVersionId = selectedVersionId(versions, videoVersionId);
   const [priorityFilter, setPriorityFilter] = useState("Todas");
   const visibleRequests = sortRequests(requests.filter((request) => (requestFilter === "Todas" || request.status === requestFilter) && (priorityFilter === "Todas" || (request.priority ?? "Normal") === priorityFilter)));
 
@@ -184,7 +186,7 @@ export default function ProjectReviewPanels({
 
   async function handleCreateRequest() {
     if (requestBusy) return;
-    const input = validateReviewInput({ comment, timestamp, videoVersionId });
+    const input = validateReviewInput({ comment, timestamp, videoVersionId: activeVersionId });
     if ("error" in input) { setRequestError(input.error); return; }
     setRequestBusy(true);
     setRequestError("");
@@ -285,7 +287,7 @@ export default function ProjectReviewPanels({
                 Enviada em {videoVersion.sentAt}
               </span>
             </div>
-              <p className="mt-3 text-sm text-zinc-300">{videoVersion.fileName}</p>
+              <p className="mt-3 break-all text-sm text-zinc-300">{videoVersion.fileName}</p>
               <VersionReviewStatus version={videoVersion} />
               {videoVersion.videoUrl ? (
                 <VideoPlayer key={videoVersion.videoUrl} src={videoVersion.videoUrl}
@@ -341,7 +343,7 @@ export default function ProjectReviewPanels({
                 <select
                   disabled={requestBusy}
                   aria-label="Versão da nova solicitação"
-                  value={videoVersionId}
+                  value={activeVersionId}
                   onChange={(event) => { setVideoVersionId(Number(event.target.value)); setTimestamp(""); }}
                   className="w-full rounded-lg border border-[#303035] bg-[#151517] px-3 py-2 text-sm text-zinc-300 outline-none"
                 >

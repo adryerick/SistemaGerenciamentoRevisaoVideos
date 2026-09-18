@@ -102,17 +102,17 @@ export default function Projects() {
 
   return (
     <main className="min-h-screen bg-[#0d0d0f] text-white">
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen flex-col sm:flex-row">
 
         {/* SIDEBAR */}
 
         <Sidebar />       
 
         {/* CONTEÚDO */}
-        <section className="relative flex-1 p-8">
+        <section className="relative min-w-0 flex-1 p-4 sm:p-8">
 
           {/* HEADER */}
-          <div className="mb-8 flex items-start justify-between">
+          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
 
             <div>
               <h2 className="text-2xl font-semibold">
@@ -127,7 +127,7 @@ export default function Projects() {
             <button
               onClick={() => setShowModal(true)}
               disabled={isLoading}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               + Novo projeto
             </button>
@@ -135,20 +135,22 @@ export default function Projects() {
           </div>
 
           {/* FILTROS */}
-          <div className="mb-6 flex items-center gap-3">
+          <div className="mb-6 flex flex-wrap items-center gap-3">
 
             <input
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Buscar projeto..."
-              className="w-72 rounded-lg border border-[#2c2c30] bg-[#101012] px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-500"
+              aria-label="Buscar projeto"
+              className="w-full rounded-lg border border-[#2c2c30] bg-[#101012] px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-500 sm:w-72"
             />
 
             <select
               value={selectedStatus}
               onChange={(event) => setSelectedStatus(event.target.value)}
-              className="rounded-lg border border-[#2c2c30] bg-[#101012] px-4 py-2.5 text-sm text-zinc-300 outline-none"
+              aria-label="Filtrar projetos por status"
+              className="w-full rounded-lg border border-[#2c2c30] bg-[#101012] px-4 py-2.5 text-sm text-zinc-300 outline-none sm:w-auto"
             >
               <option>Todos os status</option>
               <option>Em revisão</option>

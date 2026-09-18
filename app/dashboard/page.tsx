@@ -40,16 +40,16 @@ export default async function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#0d0d0f] text-white">
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen flex-col sm:flex-row">
 
         {/* SIDEBAR */}
         <Sidebar />
 
         {/* CONTEÚDO */}
-        <section className="relative flex-1 p-8">
+        <section className="relative min-w-0 flex-1 p-4 sm:p-8">
 
           {/* HEADER */}
-          <div className="mb-8 flex items-start justify-between">
+          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-2xl font-semibold">
                 Dashboard
@@ -62,7 +62,7 @@ export default async function Dashboard() {
 
             <Link
               href="/projetos"
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               + Novo projeto
             </Link>
@@ -145,6 +145,7 @@ export default async function Dashboard() {
             {projectCards.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
+            {projectCards.length === 0 && <p className="rounded-xl border border-dashed border-[#29292d] px-5 py-8 text-sm text-zinc-500">Você ainda não tem projetos. Crie o primeiro para começar a revisão.</p>}
 
           </div>
 
@@ -159,9 +160,9 @@ export default async function Dashboard() {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-[#29292d] bg-[#151517]">
+          <div className="overflow-x-auto rounded-xl border border-[#29292d] bg-[#151517]">
 
-            <div className="grid grid-cols-5 border-b border-[#29292d] px-5 py-3 text-[11px] uppercase tracking-wide text-zinc-600">
+            <div className="grid min-w-[640px] grid-cols-5 gap-3 border-b border-[#29292d] px-5 py-3 text-[11px] uppercase tracking-wide text-zinc-600">
               <span>Projeto</span>
               <span>Cliente</span>
               <span>Minutagem</span>
@@ -172,7 +173,7 @@ export default async function Dashboard() {
             {latestChangeRequests.map((request) => (
               <div
                 key={request.id}
-                className="grid grid-cols-5 items-center border-b border-[#29292d] px-5 py-4 text-sm last:border-b-0"
+                className="grid min-w-[640px] grid-cols-5 items-center gap-3 border-b border-[#29292d] px-5 py-4 text-sm break-words last:border-b-0"
               >
                 <span>{request.project.name}</span>
                 <span className="text-zinc-500">{request.project.client.name}</span>
@@ -181,6 +182,7 @@ export default async function Dashboard() {
                 <span className="text-zinc-400">{request.status}</span>
               </div>
             ))}
+            {latestChangeRequests.length === 0 && <p className="px-5 py-8 text-sm text-zinc-500">Nenhuma solicitação recebida ainda.</p>}
 
           </div>
 
