@@ -87,9 +87,11 @@ async function main() {
       const sample = path.join(temporary, "sample.mp4");
       await promisify(execFile)(ffmpegPath!, ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=24", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-threads", "2", sample], { windowsHide: true });
       const fixtureVersions = process.argv.includes("--check-empty-review") ? 0 : 2;
+      const portraitSample = path.join(temporary, "portrait.mp4");
+      if (fixtureVersions > 0) await promisify(execFile)(ffmpegPath!, ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=360x640:rate=24", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-threads", "2", portraitSample], { windowsHide: true });
       for (let index = 1; index <= fixtureVersions; index++) {
         const form = new FormData();
-        form.append("video", new Blob([await readFile(sample)], { type: "video/mp4" }), `Teste-visual-${index}.mp4`);
+        form.append("video", new Blob([await readFile(index === 1 ? portraitSample : sample)], { type: "video/mp4" }), `Teste-visual-${index}.mp4`);
         const upload: Response = await fetch(`${base}/api/projetos/${project.id}/versoes`, { method: "POST", headers: { Cookie: cookie }, body: form });
         assert.equal(upload.status, 201, await upload.clone().text());
         const version = await upload.json();

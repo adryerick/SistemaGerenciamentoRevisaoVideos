@@ -1,5 +1,12 @@
 # Histórico de entregas
 
+## 2026-09-18 — Player proporcional para vídeos verticais e horizontais
+
+- Player compartilhado por editor, cliente e comparação usa as dimensões reais do vídeo, incluindo 9:16 e 16:9.
+- Largura limitada pelo contêiner e por 70% da altura da janela; imagem centralizada sem esticar ou recortar.
+- Metadados em cache e alterações de dimensões atualizam a proporção; arquivos originais não são modificados.
+- Conferência visual isolada dos dois formatos no editor e cliente; 36 testes aprovados em produção, lint e build.
+
 ## 2026-09-18 — Revisão final de usabilidade e validação
 
 - Cadastro e edição de clientes aguardam a confirmação, bloqueiam envios repetidos e preservam os campos em falhas, com mensagem no formulário.

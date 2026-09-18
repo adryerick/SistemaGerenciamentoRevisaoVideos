@@ -5,6 +5,7 @@ import { hasVideoMetadata, markVideoTime, seekToTimestamp, subscribeVideoReadine
 import { timelineMarkers } from "../lib/review-collaboration";
 import type { ChangeRequest } from "../types";
 import { seekComparison } from "../lib/version-comparison";
+import { videoAspectRatio, videoLayout } from "../lib/video-layout";
 
 type VideoPlayerProps = {
   src: string;
@@ -29,6 +30,11 @@ export default function VideoPlayer({ src, videoRef, onMarkTime, requests = [], 
     () => 0,
   );
   const markers = timelineMarkers(requests, duration);
+  const ratio = useSyncExternalStore(
+    useCallback((notify) => subscribeVideoReadiness(video, notify), [video]),
+    useCallback(() => videoAspectRatio(video?.videoWidth ?? 0, video?.videoHeight ?? 0), [video]),
+    () => 16 / 9,
+  );
   const [markError, setMarkError] = useState("");
   useEffect(() => {
     if (ready && video) seekComparison(video, initialTime);
@@ -57,7 +63,8 @@ export default function VideoPlayer({ src, videoRef, onMarkTime, requests = [], 
             ? "O navegador não conseguiu reproduzir este vídeo. Teste a aceleração gráfica nas configurações e reinicie o navegador, ou teste em outro navegador. Se persistir, peça ao editor para reenviar o arquivo."
             : "Falha ao carregar o vídeo. Confira a conexão e atualize a página.");
         }}
-        className="max-h-[70vh] w-full rounded-lg bg-black"
+        style={videoLayout(ratio)}
+        className="mx-auto block h-auto max-h-[70vh] max-w-full rounded-lg bg-black object-contain"
       />
       {requests.some((request) => request.timestamp) && <div className="mt-4 rounded-lg border border-zinc-700 p-3">
         <p className="text-xs font-medium text-zinc-300">Comentários na linha do tempo</p>

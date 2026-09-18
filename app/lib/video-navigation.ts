@@ -6,7 +6,7 @@ export function hasVideoMetadata(video: HTMLVideoElement | null) {
 
 export function subscribeVideoReadiness(video: HTMLVideoElement | null, notify: () => void) {
   if (!video) return () => {};
-  const events = ["loadedmetadata", "loadeddata", "canplay", "playing", "timeupdate", "emptied", "error"];
+  const events = ["loadedmetadata", "loadeddata", "durationchange", "resize", "canplay", "playing", "timeupdate", "emptied", "error"];
   events.forEach((event) => video.addEventListener(event, notify));
   return () => events.forEach((event) => video.removeEventListener(event, notify));
 }
